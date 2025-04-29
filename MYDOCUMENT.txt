@@ -1,0 +1,2 @@
+for every user , he can not eneter 2 new realestates
+

@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "AVAR",
+    "slug": "AVAR",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/NotoKufiArabic-Regular.ttf",
+            "./assets/fonts/NotoKufiArabic-Bold.ttf",
+            "./assets/fonts/NotoKufiArabic-Light.ttf",
+            "./assets/fonts/NotoKufiArabic-Thin.ttf",
+            "./assets/fonts/NotoKufiArabic-SemiBold.ttf",
+            "./assets/fonts/NotoKufiArabic-Medium.ttf",
+            "./assets/fonts/Amiri-Regular.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4D4FFF",
+          "sounds": ["./assets/notification-sound.wav"]
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.amrnamora.AVAR"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c42b08ec-c254-4a53-9d58-15f3a9a905f3"
+      }
+    }
+  }
+}
