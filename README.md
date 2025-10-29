@@ -1,50 +1,59 @@
-# Welcome to your Expo app 👋
+REVE - Real Estate Mobile App (Front-End)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This repository represents the front-end mobile application of REVE, a multi-platform real estate rental service. I developed the React Native / Expo mobile app interface that interacts with the Django REST Framework API backend to provide a seamless experience for property rental and leasing.
 
-## Get started
+Project Overview
 
-1. Install dependencies
+As the Front-End Developer, I built a responsive and interactive mobile app where users can browse properties, manage bookings, and handle their accounts. The app consumes data from the backend API (REVE API) while focusing on delivering a smooth and intuitive user interface.
 
-   ```bash
-   npm install
-   ```
+Key Features
 
-2. Start the app
+Browse and filter real estate properties dynamically
 
-   ```bash
-    npx expo start
-   ```
+View detailed property pages with images and descriptions
 
-In the output, you'll find options to open the app in a
+Make reservations through an integrated booking calendar
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+User registration, login, and profile management
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Submit and view property reviews and ratings
 
-## Get a fresh project
+Responsive design optimized for mobile devices
 
-When you're ready, run:
+Technical Implementation
 
-```bash
-npm run reset-project
-```
+Developed the front-end using React Native with Expo
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Integrated with backend API endpoints for real-time data
 
-## Learn more
+Implemented navigation, state management, and interactive UI components
 
-To learn more about developing your project with Expo, look at the following resources:
+Ensured smooth user interactions and optimized performance for mobile
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Handled API responses and displayed meaningful UI feedback
 
-## Join the community
+Key Screens / Functionalities
 
-Join our community of developers creating universal apps.
+/gallery/ - Browse all properties
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+/gallery/<id>/ - Detailed property view
+
+/reservation/<property_id>/ - Book a property
+
+/account/login/ - User login
+
+/account/signup/ - User registration
+
+Tech Stack
+
+Frontend: React Native, Expo
+
+Backend Integration: REST API (Django REST Framework)
+
+UI/UX: Mobile-first design, interactive components, state management
+
+Related Projects
+
+REVE Backend API - Provides data endpoints consumed by this mobile app
+
+AVAR Web Platform - Full-stack web platform for the same real estate service
