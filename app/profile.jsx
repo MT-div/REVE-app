@@ -1,31 +1,28 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  FlatList,
-  ScrollView,
-  Animated,
-  Alert,StatusBar
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from './config';
-import MaleUser from '@/assets/images/MaleUser.png';
+import arrow from '@/assets/images/arrow.png';
+import blue from '@/assets/images/blue.png';
 import Edit from '@/assets/images/Edit.png';
-import house2 from '@/assets/images/house2.jpg';
-import back from '@/assets/images/back.jpg';
-import Favorite from '@/assets/images/Favorite.png';
-import star from '@/assets/images/star.png';
-import Accounk from '@/assets/images/Accounk.png';
 import Empty from '@/assets/images/Empty.png';
 import green from '@/assets/images/green.png';
-import blue from '@/assets/images/blue.png';
+import house2 from '@/assets/images/house2.jpg';
+import MaleUser from '@/assets/images/MaleUser.png';
+import star from '@/assets/images/star.png';
 import yellow from '@/assets/images/yellow.png';
-import arrow from '@/assets/images/arrow.png'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { API_BASE_URL } from './config/config';
 
 const CARD_WIDTH = 338 + 40; // Card width plus margins
 
@@ -59,53 +56,77 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // Retrieve the token from AsyncStorage
+        setLoading(true);
         const token = await AsyncStorage.getItem('authToken');
-        
-        // Call your backend endpoint (adjust URL if needed)
+
+        if (!token) {
+          navigation.navigate('loginpage');
+          return;
+        }
+
         const response = await axios.get(`${API_BASE_URL}/profile/`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
-        const data = response.data;
-        setProfileInfo(data);
 
-        // Format reservations data from the backend
-        const formattedBookings = data["your reservations are"]?.map((res) => ({
-          key: `res-${res.id}`,
-          place: `${res.realestate.city} - ${res.realestate.town}`,
-          cost: `${res.realestate.price}$`,
-          ratings: res.realestate.ratings, // renamed from rate to ratings
-          date: res.realestate.period,
-          type: res.realestate.type,
-          id: res.realestate.id,
-          image: res.realestate.photo ? { uri: res.realestate.photo } : house2,
-          typeimg: getTypeImage(res.realestate.type),
-        })) || [];
-        
-        setBookingsData(formattedBookings);
-        // console.log()
-        // Format real estates from the backend
-        const formattedProperties = data["your real estates are"]?.map((res) => ({
-          key: `res-${res.id}`,
-          place: `${res.city} - ${res.town}`,
-          cost: `${res.price}$`,
-          rate: res.ratings,
-          date: res.period,
-          type: res.type,
-          id: res.id,
-          image: res.photo ? { uri: res.photo } : house2,
-          typeimg: getTypeImage(res.type),
-        })) || [];
-        
-        setPropertiesData(formattedProperties);
+        // تحقق من حالة الاستجابة
+        if (response.status >= 200 && response.status < 300) {
+          const data = response.data;
+          setProfileInfo(data);
+
+          // معالجة بيانات الحجوزات
+          const formattedBookings = data["your reservations are"]?.map((res) => ({
+            key: `res-${res.id}`,
+            place: `${res.city || 'غير محدد'} - ${res.town || 'غير محدد'}`,
+            cost: `${res.price_with_benefit || 0}$`,
+            rate: res.ratings || 'غير مُقيَّم',
+            date: res.period || 'بدون تاريخ',
+            type: res.type || 'غير معروف',
+            id: res.id,
+            image: res.photo ? { uri: res.photo } : house2,
+            typeimg: getTypeImage(res.type),
+          })) || [];
+
+          setBookingsData(formattedBookings);
+
+          // معالجة بيانات العقارات
+          const formattedProperties = data["your real estates are"]?.map((res) => ({
+            key: `res-${res.id}`,
+            place: `${res.city || 'غير محدد'} - ${res.town || 'غير محدد'}`,
+            cost: `${res.price_with_benefit || 0}$`,
+            rate: res.ratings || 'غير مُقيَّم',
+            date: res.period || 'بدون تاريخ',
+            type: res.type || 'غير معروف',
+            id: res.id,
+            image: res.photo ? { uri: res.photo } : house2,
+            typeimg: getTypeImage(res.type),
+          })) || [];
+
+          setPropertiesData(formattedProperties);
+        } else {
+          throw new Error(response.data?.message || 'Server returned an error');
+        }
       } catch (err) {
-        console.error("Error fetching profile", err);
+        console.error("Error fetching profile:", {
+          error: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
+
+        Alert.alert(
+          'خطأ',
+          err.response?.data?.error || 'حدث خطأ أثناء جلب البيانات',
+          [{ text: 'حسناً' }, { text: 'إعادة المحاولة', onPress: fetchProfile }]
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProfile();
+    // إضافة مستمع لحدث التركيز
+    const unsubscribe = navigation.addListener('focus', fetchProfile);
+
+    // التنظيف
+    return unsubscribe;
   }, [navigation]);
 
   const toggleFavorite = (key) => {
@@ -139,26 +160,28 @@ const ProfilePage = () => {
         <Text style={styles.cardcost}>
           {item.cost} {item.date}
         </Text>
+        {/* <Text style={styles.cardid}>
+  <Image source={item.typeimg} style={styles.typeimg} /> {item.type} : {item.id}
+</Text> */}
         <Text style={styles.cardid}>
           <Image
             source={
-              item.type === 'شقة'
-                ? green
-                : item.type === 'مزرعة'
-                ? blue
-                : yellow
+              item.type === 'شقة' ? green :
+                item.type === 'مزرعة' ? blue : yellow
             }
             style={styles.typeimg}
           />
           <Text> </Text>
-          <Text style={styles.item_id}>
+          <Text style={styles.type_id}>
             {item.type} : {item.id}
           </Text>
         </Text>
         <View style={styles.rateDetails}>
           <Image source={star} style={styles.star} />
-          <Text style={styles.rate}>{parseFloat(item.ratings).toFixed(1)}</Text>
-          </View>
+          <Text style={styles.rate}>
+            {parseFloat(item.rate) === 0.0 ? '---' : parseFloat(item.rate).toFixed(1)}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -171,7 +194,7 @@ const ProfilePage = () => {
           Alert.alert('Error', 'Missing property ID');
           return;
         }
-        // Navigate to CardDitalsOwner if the card comes from عقاراتي
+        // Navigate to CardDitals if the card comes from حجوزاتي
         navigation.push('CardDitalsOwner', { id: item.id });
       }}
     >
@@ -188,7 +211,17 @@ const ProfilePage = () => {
           {item.cost} {item.date}
         </Text>
         <Text style={styles.cardid}>
-          <Image source={item.typeimg} style={styles.typeimg} /> {item.type} : {item.id}
+          <Image
+            source={
+              item.type === 'شقة' ? green :
+                item.type === 'مزرعة' ? blue : yellow
+            }
+            style={styles.typeimg}
+          />
+          <Text> </Text>
+          <Text style={styles.type_id}>
+            {item.type} : {item.id}
+          </Text>
         </Text>
         <View style={styles.rateDetails}>
           <Image source={star} style={styles.star} />
@@ -245,17 +278,17 @@ const ProfilePage = () => {
 
 
 
-  
+
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-       <StatusBar
+      <StatusBar
         style="light" // اختر "light" أو "dark" حسب خلفية التطبيق
         hidden={false} // قم بعرض أو إخفاء البار العلوي
         translucent={true} // جعل البار شفافًا إذا أردت
         backgroundColor="#4D4FFF" // لون الخلفية إذا كان غير شفاف
       />
-       <View style={styles.headerContainer}>
+      <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => navigation.navigate('gallary')}>
           <Image source={arrow} style={styles.arrowIcon} />
         </TouchableOpacity>
@@ -278,25 +311,25 @@ const ProfilePage = () => {
 
         </View>
         <TouchableOpacity
-  style={styles.editButtoncon}
-  onPress={async () => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) {
-        Alert.alert('خطأ', 'يجب تسجيل الدخول أولاً');
-        navigation.navigate('loginpage');
-        return;
-      }
-      navigation.navigate('edit');
-    } catch (error) {
-      console.error('Error checking token:', error);
-      Alert.alert('خطأ', 'حدث خطأ أثناء التحقق من تسجيل الدخول');
-    }
-  }}
->
-  <Image source={Edit} style={styles.editicon} />
-  <Text style={styles.editText}>تعديل الحساب</Text>
-</TouchableOpacity><View style={styles.line}></View>
+          style={styles.editButtoncon}
+          onPress={async () => {
+            try {
+              const token = await AsyncStorage.getItem('authToken');
+              if (!token) {
+                Alert.alert('خطأ', 'يجب تسجيل الدخول أولاً');
+                navigation.navigate('loginpage');
+                return;
+              }
+              navigation.navigate('edit');
+            } catch (error) {
+              console.error('Error checking token:', error);
+              Alert.alert('خطأ', 'حدث خطأ أثناء التحقق من تسجيل الدخول');
+            }
+          }}
+        >
+          <Image source={Edit} style={styles.editicon} />
+          <Text style={styles.editText}>تعديل الحساب</Text>
+        </TouchableOpacity><View style={styles.line}></View>
       </View>
 
       {/* قسم الحجوزات مع تمرير كرت بكرت */}
@@ -369,8 +402,8 @@ const ProfilePage = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#F7F7F7',
-    paddingTop:20,
-   
+    paddingTop: 20,
+
   },
   line: {
     height: 2,
@@ -391,9 +424,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(149, 147, 147, 0.69)',
     paddingBottom: 10,
-    paddingTop:10,
-
-backgroundColor: '#4d4fff',
+    paddingTop: 10,
+    paddingRight: 10,
+    paddingRight: 10,
+    backgroundColor: '#4d4fff',
   },
   title: {
     fontSize: 25,
@@ -430,7 +464,8 @@ backgroundColor: '#4d4fff',
   profileImage: {
     borderRadius: 50,
     width: 100,
-    height: 100
+    height: 100,
+    tintColor: '#4d4fff',
   },
   name: {
     fontSize: 22,
@@ -448,29 +483,29 @@ backgroundColor: '#4d4fff',
     height: 'auto',
     marginTop: 10,
     marginBottom: 20,
-    backgroundColor: '#fff',
-    borderWidth:2,
-    borderColor:'#4D4FFF',
+    backgroundColor: '#4D4FFF',
+    borderWidth: 2,
+    borderColor: '#4D4FFF',
     borderRadius: 5,
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-evenly',
     fontFamily: 'NotoKufiArabic-Regular',
-    
+
   },
   editText: {
     fontSize: 18,
-    color: '#4D4FFF',
+    color: '#fff',
     display: 'flex',
     fontFamily: 'NotoKufiArabic-Regular',
-    overflow:'hidden',
-   
+    overflow: 'hidden',
+
   },
   editicon: {
     width: 25,
     height: 25,
-    tintColor: '#4D4FFF'
+    tintColor: '#fff'
 
   },
   bookingsContainer: {
@@ -503,7 +538,7 @@ backgroundColor: '#4d4fff',
     marginBottom: 5,
     marginRight: 20,
     marginLeft: 20,
-    paddingBottom:5,
+    paddingBottom: 5,
     backgroundColor: '#fff',
     shadowColor: 'rgba(0, 0, 0, 1)',
     shadowOffset: { width: 0, height: 4 },
@@ -520,7 +555,7 @@ backgroundColor: '#4d4fff',
     borderTopLeftRadius: 20,
   },
   Favorite: {
-    
+
     position: 'absolute',
     zIndex: 2,
     margin: 5,
@@ -553,12 +588,13 @@ backgroundColor: '#4d4fff',
     paddingHorizontal: 10,
   },
   star: {
+    tintColor: 'gold',
     width: 35,
     height: 35,
     fontFamily: 'NotoKufiArabic-Regular',
   },
   rate: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'NotoKufiArabic-Regular',
   },
   typeimg: {
@@ -575,20 +611,20 @@ backgroundColor: '#4d4fff',
   noProperties: {
     color: '#666',
   },
-  BackBtnContaner:{
-    display:'flex',
-    alignItems:'center',
+  BackBtnContaner: {
+    display: 'flex',
+    alignItems: 'center',
   },
   backButtoncon: {
     height: 'auto',
     width: '50%',
     paddingHorizontal: 10,
-    paddingBottom:3,
+    paddingBottom: 3,
     backgroundColor: '#E0E0E0',
     borderRadius: 10,
     alignItems: 'center',
     textAlign: 'center',
-    justifyContent:'center',
+    justifyContent: 'center',
     marginTop: 15,
     marginBottom: 50,
     marginRight: 20,
@@ -605,12 +641,12 @@ backgroundColor: '#4d4fff',
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    
+
     height: 350,
     fontFamily: 'NotoKufiArabic-Regular',
   },
   emptyImage: {
-   
+
   },
   emptyText: {
     fontSize: 18,

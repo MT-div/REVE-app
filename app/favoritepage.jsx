@@ -1,32 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, Image, FlatList, TouchableOpacity, Alert } from 'react-native';
+
+
+import arrow from '@/assets/images/arrow.png';
+import blue from '@/assets/images/blue.png';
+import Favorite from '@/assets/images/Favorite.png';
+import green from '@/assets/images/green.png';
+import house2 from '@/assets/images/house2.jpg';
+import star from '@/assets/images/star.png';
+import yellow from '@/assets/images/yellow.png';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { FlatList, Image, Modal, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
-import {StatusBar} from 'react-native';
-import back from '@/assets/images/back.jpg';
-import house2 from '@/assets/images/house2.jpg';
-import arrow from '@/assets/images/arrow.png'; // استيراد صورة السهم
-import Favorite from '@/assets/images/Favorite.png';
-import star from '@/assets/images/star.png';
-import green from '@/assets/images/green.png';
-import blue from '@/assets/images/blue.png';
-import yellow from '@/assets/images/yellow.png';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from './config/config';
 
-// Use your server’s URL from settings
+const ErrorMessageModal = ({ visible, message, onClose, onConfirm }) => {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.errorModalOverlay}>
+          <View style={styles.errorModalContainer}>
+            <Text style={styles.errorModalText}>{message}</Text>
+            <View style={styles.modalButtonsContainer}>
+              <TouchableOpacity
+                style={[styles.errorModalButton, styles.cancelButton]}
+                onPress={onClose}
+              >
+                <Text style={styles.errorModalButtonText}>إلغاء</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.errorModalButton}
+                onPress={onConfirm}
+              >
+                <Text style={styles.errorModalButtonText}>تأكيد</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+};
 
-// const API_BASE_URL = 'http://amrnamora.pythonanywhere.com';
-// const API_BASE_URL = 'http://192.168.1.102:8000';
-
-const HomePage = () => {
+const favoritepage = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
-
-  // This state will hold the list of favorite real estates (with details)
   const [favorites, setFavorites] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [selectedFavorite, setSelectedFavorite] = useState(null);
 
-  // Map a full real estate object (as returned by RealEstateSerializer) into your UI’s expected structure.
   const mapRealestate = (realestate) => {
     let typeimg;
     if (realestate.type === 'شقة') {
@@ -51,15 +79,12 @@ const HomePage = () => {
     };
   };
 
-  // If the favourite serializer returns only an ID for realestate,
-  // fetch its full details. We call the gallery endpoint with a filter.
   const fetchRealestateDetails = async (realestateId) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/gallery/`, {
         headers: { Authorization: `Bearer ${user.token}` },
-        params: { id: realestateId }  // Assuming your RealEstateFilter supports filtering by id.
+        params: { id: realestateId }
       });
-      // Expecting response to be in the format: { "real estates": [ { ... } ] }
       if (response.data['real estates'] && response.data['real estates'].length > 0) {
         return response.data['real estates'][0];
       }
@@ -70,32 +95,28 @@ const HomePage = () => {
     }
   };
 
-  // Fetch the current user’s favorites.
   const fetchFavorites = async () => {
     if (!user) return;
     try {
       const response = await axios.get(`${API_BASE_URL}/favourit/`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      // Expected response format: { "your favourites": [ { ... }, { ... }, ... ] }
       const favList = response.data['your favourites'];
       const detailedFavorites = await Promise.all(
         favList.map(async (fav) => {
-          // If fav.realestate is already an object, use it.
           if (typeof fav.realestate === 'object' && fav.realestate !== null) {
             return mapRealestate(fav.realestate);
           } else {
-            // Otherwise, assume it’s an ID and fetch details.
             const details = await fetchRealestateDetails(fav.realestate);
             return details ? mapRealestate(details) : null;
           }
         })
       );
-      // Remove null entries (in cases where fetching details failed)
       setFavorites(detailedFavorites.filter((item) => item !== null));
     } catch (error) {
       console.error('Error fetching favorites:', error);
-      Alert.alert('Error', 'Unable to fetch favorites from the backend.');
+      setErrorMessage('تعذر جلب العناصر المفضلة من الخادم');
+      setErrorVisible(true);
     }
   };
 
@@ -103,46 +124,35 @@ const HomePage = () => {
     fetchFavorites();
   }, [user]);
 
-  // When the user taps the favorite icon, confirm removal,
-  // then call your toggle endpoint and remove it from the state.
   const toggleFavorite = (key) => {
-    Alert.alert(
-      "تأكيد",
-      "هل تريد بالتأكيد إزالة هذا العقار من المفضلة؟",
-      [
-        {
-          text: "إلغاء",
-          style: "cancel"
-        },
-        {
-          text: "نعم",
-          onPress: async () => {
-            try {
-              await axios.post(
-                `${API_BASE_URL}/toggle-favorite/${key}/`,
-                {},
-                { headers: { Authorization: `Bearer ${user.token}` } }
-              );
-              setFavorites(prev => prev.filter(item => item.key !== key));
-            } catch (error) {
-              console.error('Error toggling favorite:', error);
-              Alert.alert('Error', 'Unable to remove the favorite.');
-            }
-          }
-        }
-      ]
-    );
+    setSelectedFavorite(key);
+    setErrorMessage("هل تريد بالتأكيد إزالة هذا العقار من المفضلة؟");
+    setErrorVisible(true);
+  };
+
+  const handleConfirmRemoval = async () => {
+    try {
+      await axios.post(
+        `${API_BASE_URL}/toggle-favorite/${selectedFavorite}/`,
+        {},
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setFavorites(prev => prev.filter(item => item.key !== selectedFavorite));
+      setErrorVisible(false);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      setErrorMessage('تعذر إزالة العنصر من المفضلة');
+    }
   };
 
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.card}
     onPress={() => {
-            console.log('1            1')
             if (!item?.id) {
-              Alert.alert('Error', 'Missing property ID');
+              setErrorMessage('معرف العقار مفقود');
+              setErrorVisible(true);
               return;
             }
-            console.log(item.id)
             navigation.navigate('CardDitals', { id: item.id })
           }}
     >
@@ -174,7 +184,9 @@ const HomePage = () => {
         </Text>
         <View style={styles.rateDetails}>
           <Image source={star} style={styles.star} />
-          <Text style={styles.rate}>{item.rate}</Text>
+             <Text style={styles.rate}>
+            {parseFloat(item.rate) === 0.0 ? '---' : parseFloat(item.rate).toFixed(1)}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -182,11 +194,17 @@ const HomePage = () => {
 
   return (
     <View style={styles.container}>
-       <StatusBar
-        style="light" // اختر "light" أو "dark" حسب خلفية التطبيق
-        hidden={false} // قم بعرض أو إخفاء البار العلوي
-        translucent={true} // جعل البار شفافًا إذا أردت
-        backgroundColor="#4D4FFF" // لون الخلفية إذا كان غير شفاف
+      <ErrorMessageModal
+        visible={errorVisible}
+        message={errorMessage}
+        onClose={() => setErrorVisible(false)}
+        onConfirm={handleConfirmRemoval}
+      />
+      <StatusBar
+        style="light"
+        hidden={false}
+        translucent={true}
+        backgroundColor="#4D4FFF"
       />
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => navigation.navigate('gallary')}>
@@ -199,7 +217,8 @@ const HomePage = () => {
         data={favorites}
         renderItem={renderItem}
         keyExtractor={item => item.key}
-        style={{  width: '100%', // تأكد من أن الحاوية تأخذ العرض الكامل
+        style={{  
+          width: '100%',
           height: 'auto',
           backgroundColor: '#F7F7F7',
           paddingTop:20,
@@ -223,20 +242,18 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(149, 147, 147, 0.69)',
     paddingBottom: 10,
     paddingTop:30,
-backgroundColor:'#4D4FFF',
-
+    paddingRight:10,
+    backgroundColor:'#4D4FFF',
   },
   title: {
     fontSize: 25,
     textAlign: 'right',
     marginTop: -8,
     fontFamily: 'NotoKufiArabic-Bold',
-
   },
   arrowIcon: {
     width: 40,
     height: 40,
-    
   },
   cardsContainer: {
     height: 'auto',
@@ -248,7 +265,6 @@ backgroundColor:'#4D4FFF',
     marginLeft:20,
   },
   card: {
-
     width: '90%',
     height: 'auto',
     marginBottom: 30,
@@ -272,7 +288,6 @@ backgroundColor:'#4D4FFF',
     borderTopLeftRadius: 20,
   },
   Favorite: {
-    
     position: 'absolute',
     zIndex: 2,
     margin: 5,
@@ -294,7 +309,6 @@ backgroundColor:'#4D4FFF',
   },
   cardid: {
     textAlign: 'right',
-
   },
   rateDetails: {
     display: 'flex',
@@ -304,26 +318,72 @@ backgroundColor:'#4D4FFF',
     fontFamily: 'NotoKufiArabic-Regular',
   },
   star: {
+    tintColor:'gold',
     width: 35,
     height: 35,
     fontFamily: 'NotoKufiArabic-Regular',
   },
   rate: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'NotoKufiArabic-Regular',
   },
   typeimg: {
     width: 9,
     height: 9,
     textAlign: 'right',
-
   },
   item_id: {
     textAlign: 'right',
-
     fontSize: 13,
     fontFamily: 'NotoKufiArabic-Regular',
   },
+  errorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorModalContainer: {
+    backgroundColor: '#fff',
+    width: '80%',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4D4FFF',
+  },
+  errorModalText: {
+    fontSize: 18,
+    textAlign: 'center',
+    fontFamily: 'NotoKufiArabic-Regular',
+    color: '#333',
+    marginBottom: 20,
+  },
+  modalButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 15,
+  },
+  errorModalButton: {
+    backgroundColor: '#4D4FFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#e0e0e0',
+    borderWidth:1,
+    borderColor:'#ccc',
+  },
+  errorModalButtonText: {
+    color:'#000',
+
+    fontFamily: 'NotoKufiArabic-Bold',
+    fontSize: 16,
+  },
 });
 
-export default HomePage;
+export default favoritepage;

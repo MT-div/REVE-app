@@ -1,38 +1,64 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  FlatList,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  Animated,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+
+import close from '@/assets/images/close.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import moment from 'moment';
-import close from '@/assets/images/close.png';
-import { API_BASE_URL } from './config';
-import { useAuth } from '../src/context/AuthContext'; // Import your auth context
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
+} from 'react-native';
+import { useAuth } from '../src/context/AuthContext';
+import { API_BASE_URL } from './config/config';
+
+// Add ErrorMessageModal component
+const ErrorMessageModal = ({ visible, message, onClose }) => {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.errorModalOverlay}>
+          <View style={styles.errorModalContainer}>
+            <Text style={styles.errorModalText}>{message}</Text>
+            <TouchableOpacity
+              style={styles.errorModalButton}
+              onPress={onClose}
+            >
+              <Text style={styles.errorModalButtonText}>موافق</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+};
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.5;
 
 const HajesAqar = () => {
-  // Extract id, startDate, and endDate from the URL parameters.
   const { id, startDate: initialStartDate = '', endDate: initialEndDate = '' } = useLocalSearchParams();
-  const { user } = useAuth(); // Get the authenticated user and token
-
+  const { user } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState(initialEndDate);
-
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorVisible, setErrorVisible] = useState(false);
+const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const formatArabicDate = (dateStr) => {
     if (!dateStr) return '-/-/2025';
     const date = moment(dateStr);
@@ -62,7 +88,9 @@ const HajesAqar = () => {
       if (data.realestate && data.realestate.images && data.realestate.images.length > 0) {
         images = images.concat(data.realestate.images.map((imgObj) => imgObj.image));
       }
-      const propertyDetails = { ...data.realestate, images };
+      const propertyDetails = { ...data.realestate, images,price_with_benefit: data.realestate.price_with_benefit || 0, // قيم افتراضية
+  ead_price_with_benefit: data.realestate.ead_price_with_benefit || 0,
+  holiday_price_with_benefit: data.realestate.holiday_price_with_benefit || 0 };
       setProperty(propertyDetails);
     } catch (error) {
       console.error('Error fetching property details:', error);
@@ -73,128 +101,141 @@ const HajesAqar = () => {
 
   const handleBooking = async () => {
     if (!startDate || !endDate) {
-      Alert.alert("خطأ", "يرجى اختيار تاريخ البداية والنهاية");
-      return;
+        setErrorMessage("يرجى اختيار تاريخ البداية والنهاية");
+        setErrorVisible(true);
+        return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/reservation/${id}/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`, // Added token header
-        },
-        body: JSON.stringify({
-          start_date: startDate,
-          end_date: endDate,
-        }),
-      });
-      if (response.ok) {
-        navigation.navigate('Done', { id });
-      } else {
-        const errorData = await response.json();
-        Alert.alert("خطأ", errorData.error || "فشل إنشاء الحجز");
-      }
-    } catch (error) {
-      console.error("Booking error:", error);
-      Alert.alert("خطأ", "مشكلة في الاتصال بالشبكة أو الخادم");
-    }
-  };
+        const response = await fetch(`${API_BASE_URL}/reservation/${id}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${user?.token}`,
+            },
+            body: JSON.stringify({
+                start_date: startDate,
+                end_date: endDate,
+            }),
+        });
 
-  // This function checks if the user is logged in before going to the Calendar screen.
+        const responseData = await response.json(); // استخراج البيانات من الاستجابة
+
+
+        if (response.ok) {
+            navigation.navigate('Done', { id });
+        } else {
+            setErrorMessage(responseData.error || responseData["تنبيه!"] || "فشل إنشاء الحجز");
+            setErrorVisible(true);
+        }
+    } catch (error) {
+        console.error("Booking error:", error);
+        setErrorMessage("مشكلة في الاتصال بالشبكة أو الخادم");
+        setErrorVisible(true);
+    }
+};
   const handleNavigateCalendar = async () => {
     const token = await AsyncStorage.getItem('authToken');
     if (!token) {
-      Alert.alert('خطأ', 'يجب تسجيل الدخول أولاً');
+      setErrorMessage('يجب تسجيل الدخول أولاً');
+      setErrorVisible(true);
       navigation.navigate('loginpage');
       return;
     }
     navigation.navigate('Calendar', { id, startDate, endDate });
   };
 
-  // Calculate the net price (السعر الصافي), first installment (الدفعة الاولى), and second installment (الدفعة الثانية)
   let computedNetPrice = 0;
-  let computedFirstPayment = 0;
-  let computedSecondPayment = 0;
-  if (property && startDate && endDate) {
-    const start = moment(startDate);
-    const end = moment(endDate);
-    let numberOfDays = end.diff(start, 'days') + 1;
-    if (numberOfDays < 1) numberOfDays = 1; // Default to at least 1 day
-    computedNetPrice = property.price * numberOfDays;
-    computedFirstPayment = computedNetPrice * 0.30;
-    computedSecondPayment = computedNetPrice - computedFirstPayment;
-  }
+let computedFirstPayment = 0;
+let computedSecondPayment = 0;
+if (property && startDate && endDate) {
+  const start = moment(startDate);
+  const end = moment(endDate);
+  
+  // تحقق من صحة التواريخ
+  if (!start.isValid() || !end.isValid()) return; 
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4D4FFF" />
-      </View>
-    );
+  let current = start.clone();
+  
+  while (current.isSameOrBefore(end)) {
+    const isEid = current.month() === 5 && 
+                 current.date() >= 6 && 
+                 current.date() <= 9;
+    
+    const isHoliday = current.day() === 5 || 
+                      current.day() === 6;
+    
+    // تحويل القيم إلى أرقام مع قيمة افتراضية 0
+    computedNetPrice += isEid ? 
+      Number(property.ead_price_with_benefit || property.price_with_benefit) :
+      isHoliday ? 
+        Number(property.holiday_price_with_benefit || property.price_with_benefit) :
+        Number(property.price_with_benefit || 1000);
+    
+    current.add(1, 'day');
   }
+  
+  computedFirstPayment = computedNetPrice * 0.50;
+  computedSecondPayment = computedNetPrice - computedFirstPayment;
+}
 
   if (!property) {
     return (
       <View style={styles.errorContainer}>
-        <Text>Error loading property details.</Text>
+        <Text></Text>
       </View>
     );
   }
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
+      <ErrorMessageModal
+        visible={errorVisible}
+        message={errorMessage}
+        onClose={() => setErrorVisible(false)}
+      />
+      
       <View style={styles.container}>
-        {/* Updated the button from goBack() to navigating to 'CardDitals' passing the id */}
-        <TouchableOpacity onPress={() => navigation.push('CardDitals', { id })}>
+        <TouchableOpacity onPress={() => navigation.push('CardDitals', { from: 'HajesAqar',id })}>
           <Image source={close} style={styles.close} />
         </TouchableOpacity>
         <View style={styles.topContainer}>
           <View style={styles.imageSection}>
-            <Animated.FlatList
-              data={property.images}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                { useNativeDriver: false }
-              )}
-              scrollEventThrottle={16}
-              keyExtractor={(_, index) => index.toString()}
-              renderItem={({ item }) => (
-                <Image source={{ uri: item }} style={styles.fullWidthImage} />
-              )}
-            />
-            {property.images && (
-              <View style={styles.pagination}>
-                {property.images.map((_, i) => {
-                  const inputRange = [
-                    (i - 1) * CARD_WIDTH,
-                    i * CARD_WIDTH,
-                    (i + 1) * CARD_WIDTH,
-                  ];
-                  const opacity = scrollX.interpolate({
-                    inputRange,
-                    outputRange: [0.5, 1, 0.5],
-                    extrapolate: 'clamp',
-                  });
-                  const scale = scrollX.interpolate({
-                    inputRange,
-                    outputRange: [0.8, 1.2, 0.8],
-                    extrapolate: 'clamp',
-                  });
-                  return (
-                    <Animated.View
-                      key={i}
-                      style={[styles.dot, { opacity, transform: [{ scale }] }]}
-                    />
-                  );
-                })}
-              </View>
-            )}
+         <Animated.FlatList
+  data={property.images}
+  horizontal
+  pagingEnabled
+  showsHorizontalScrollIndicator={false}
+  onScroll={Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    {
+      useNativeDriver: false,
+      listener: (event) => {
+        const contentOffset = event.nativeEvent.contentOffset.x;
+        const viewSize = event.nativeEvent.layoutMeasurement.width;
+        const pageNum = Math.floor(contentOffset / viewSize + 0.5);
+        if (pageNum !== currentImageIndex) {
+          setCurrentImageIndex(pageNum);
+        }
+      }
+    }
+  )}
+  scrollEventThrottle={1} // مهم جداً لزيادة دقة التتبع
+  keyExtractor={(_, index) => index.toString()}
+  renderItem={({ item }) => (
+    <Image source={{ uri: item }} style={styles.fullWidthImage} />
+  )}
+/>
+    {property.images && (
+  <View style={styles.paginationContainer}>
+    <Text style={styles.currentIndexText}>
+      {currentImageIndex + 1}/{property.images.length}
+    </Text>
+  </View>
+)}
           </View>
           <View style={styles.textSection}>
             <Text style={styles.title}>{property.type}</Text>
+                        <Text style={styles.title}>{property.city}</Text>
             <Text style={styles.title}>{property.town}</Text>
           </View>
         </View>
@@ -213,19 +254,37 @@ const HajesAqar = () => {
           </View>
         </View>
 
-        {/* السعر اليومي */}
-        <View style={styles.container2}>
-          <Text style={styles.label}>تفاصيل السعر</Text>
+ <View style={styles.container2}>
+  <Text style={styles.label}>وقت الوصول والمغادرة</Text>
+  <View style={styles.dateContainer}>
+        <Text style={styles.textarrive}>المغادرة: <Text style={styles.textPrice}>{property?.checkout || 'غير محدد'}</Text></Text>
+
+    <Text style={styles.textarrive}>الوصول: <Text style={styles.textPrice}>{property?.checkin || 'غير محدد'}</Text></Text>
+  </View>
+</View>
+
+       <View style={styles.container2}>
+          <Text style={styles.label}>تفاصيل الايجار</Text>
           <View style={styles.container4}>
-            <Text style={styles.textPrice}>{property.price} $</Text>
-            <Text style={styles.textPrice}>السعر {property.period} الواحد</Text>
+            <Text style={styles.textPrice}>{property.price_with_benefit} $</Text>
+            <Text style={styles.textPrice}>اجار اليوم داخل الاسبوع</Text>
           </View>
+          <View style={styles.container4}>
+            <Text style={styles.textPrice}>{property.holiday_price_with_benefit || property.price_with_benefit} $</Text>
+            <Text style={styles.textPrice}>اجار يوم الجمعة او السبت</Text>
+          </View>
+          <View style={styles.container4}>
+            <Text style={styles.textPrice}>{property.ead_price_with_benefit|| property.price_with_benefit} $</Text>
+            <Text style={styles.textPrice}>اجار يوم العيد </Text>
+          </View>
+          
         </View>
 
-        {/* السعر الصافي والدفعات */}
         <View style={styles.container5}>
           <View style={styles.container3}>
-            <Text style={styles.total}>{computedNetPrice.toFixed(2)} $</Text>
+             <Text style={styles.total}>
+    {(computedNetPrice || 0).toFixed(2)} $
+  </Text>
             <Text style={styles.total}>الصافي</Text>
           </View>
           <View style={styles.container4}>
@@ -248,21 +307,17 @@ const HajesAqar = () => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-
   },
-
   fullWidthImage: {
     width: 200,
     height: 200,
     borderRadius: 15,
     resizeMode: 'cover',
   },
- 
   title: {
     fontSize: 15,
     textAlign: 'right',
@@ -284,8 +339,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     marginLeft:10,
-    marginVertical:10,
-
+    marginTop:10,
   },
   topContainer: {
     flexDirection: 'row',
@@ -310,7 +364,7 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoKufiArabic-Bold',
   },
   container2: {
-    padding: 20,
+    padding: 10,
     borderBlockColor: 'gray',
     borderBottomWidth: 1,
   },
@@ -355,7 +409,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   container3: {
-    
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -364,10 +417,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  textarrive:{
+     fontSize: 15,
+    marginVertical: 2,
+    fontFamily: 'NotoKufiArabic-Regular',
+    color:'#4d4fff',
+  },
   textPrice: {
     fontSize: 15,
     marginVertical: 2,
     fontFamily: 'NotoKufiArabic-Regular',
+    color:'#000'
   },
   sendContainer: {
     padding: 20,
@@ -377,7 +437,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     fontFamily: 'NotoKufiArabic-Regular',
-
   },
   sendbutton: {
     backgroundColor: '#4D4FFF',
@@ -388,6 +447,61 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     fontFamily: 'NotoKufiArabic-Regular',
   },
+  errorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorModalContainer: {
+    backgroundColor: '#fff',
+    width: '80%',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4D4FFF',
+  },
+  errorModalText: {
+    fontSize: 18,
+    textAlign: 'center',
+    fontFamily: 'NotoKufiArabic-Regular',
+    color: '#333',
+    marginBottom: 20,
+  },
+  errorModalButton: {
+    backgroundColor: '#4D4FFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+  },
+  errorModalButtonText: {
+    color: '#fff',
+    fontFamily: 'NotoKufiArabic-Bold',
+    fontSize: 16,
+  },
+    paginationContainer: {
+    position: 'absolute',
+    bottom: 15,
+    right: 15,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  currentIndexText: {
+    color: 'white',
+    fontSize: 14,
+    fontFamily: 'NotoKufiArabic-Bold',
+  },
+  currentIndexContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 10, // زوايا أكثر استدارة
+    paddingHorizontal: 8,  // أصغر من السابق
+    paddingVertical: 4,    // أصغر من السابق
+  },
+
 });
+
 
 export default HajesAqar;

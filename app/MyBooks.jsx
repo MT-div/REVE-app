@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator
-} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import moment from 'moment';
-import { API_BASE_URL } from './config'; // Make sure this points to your backend base URL
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { API_BASE_URL } from './config/config'; // Make sure this points to your backend base URL
 
 const PropertyBookingsScreen = () => {
   const navigation = useNavigation();
@@ -60,7 +66,7 @@ const PropertyBookingsScreen = () => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.iconButton}
-          onPress={() => navigation.navigate('CardDitalsOwner', { id })}
+          onPress={() => navigation.navigate('CardDitalsOwner', { from: 'MyBooks',id })}
           activeOpacity={0.7}
         >
           <Image

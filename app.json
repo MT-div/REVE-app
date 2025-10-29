@@ -1,16 +1,17 @@
 {
   "expo": {
-    "name": "AVAR",
-    "slug": "AVAR",
+    "name": "R Ê V E",
+    "slug": "revee",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#4d4fff",
+      "newArchEnabled": true
     },
     "plugins": [
       "expo-router",
@@ -28,25 +29,28 @@
           ]
         }
       ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#4D4FFF",
-          "sounds": ["./assets/notification-sound.wav"]
-        }
-      ]
+      "expo-localization"
     ],
+    "updates": {
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/0af3e503-7860-4c07-af19-b9351cd6035f"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "WAKE_LOCK",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.amrnamora.AVAR"
+      "package": "com.REVEsyria.Reve"
     },
     "web": {
       "bundler": "metro",
@@ -58,8 +62,12 @@
         "origin": false
       },
       "eas": {
-        "projectId": "c42b08ec-c254-4a53-9d58-15f3a9a905f3"
+        "projectId": "57bf44a3-fb5e-43a4-9c25-f51001e34d41"
       }
+    },
+    "owner": "reveee",
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

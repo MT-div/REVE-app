@@ -1,32 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-    View,
-    Text,
-    Image,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    FlatList,
-    Dimensions,
-    Animated,
-    Share,
-    Alert,
-    StatusBar,
-    ActivityIndicator,
-    Platform
-} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Linking } from 'react-native'; // استيراده من الحزمة الرئيسية
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-const { width } = Dimensions.get('window');
-import { API_BASE_URL } from './config';
 import { useLocalSearchParams } from 'expo-router'; // Import the hook
+import { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    FlatList,
+    Image,
+    Linking,
+    Platform,
+    ScrollView,
+    Share,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '../src/context/AuthContext'; // adjust the import path as needed
+import { API_BASE_URL } from './config/config';
+const { width } = Dimensions.get('window');
 
-const PropertyDetailsScreen = ({ }) => {
+const CardDitals = ({ }) => {
 
-    const { id } = useLocalSearchParams();
+    const { id, from  } = useLocalSearchParams();
     const navigation = useNavigation();
+    const [canViewLocation, setCanViewLocation] = useState(false); // Add this state
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [showFullReview, setShowFullReview] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -35,11 +37,13 @@ const PropertyDetailsScreen = ({ }) => {
     const [loading, setLoading] = useState(true);
     const [property, setProperty] = useState(null);
     const [reviews, setReviews] = useState([]);
-    // تأثيرات الحركة
+    const [isReserved, setIsReserved] = useState(false); // Add this state
     const scaleValue = useRef(new Animated.Value(1)).current;
     const favoriteScale = useRef(new Animated.Value(1)).current;
     const autoScrollInterval = useRef(null);
     const { user } = useAuth();
+
+ 
 
 
     // تقليب الصور تلقائياً
@@ -54,47 +58,47 @@ const PropertyDetailsScreen = ({ }) => {
         const now = new Date();
         const pastDate = new Date(dateString);
         const diffInSeconds = Math.floor((now - pastDate) / 1000);
-        
+
         // Arabic unit names (feminine form for numbers)
         const units = {
-          second: { singular: 'ثانية', plural: 'ثواني' },
-          minute: { singular: 'دقيقة', plural: 'دقائق' },
-          hour: { singular: 'ساعة', plural: 'ساعات' },
-          day: { singular: 'يوم', plural: 'أيام' },
-          week: { singular: 'أسبوع', plural: 'أسابيع' },
-          month: { singular: 'شهر', plural: 'أشهر' },
-          year: { singular: 'عام', plural: 'أعوام' }
+            second: { singular: 'ثانية', plural: 'ثواني' },
+            minute: { singular: 'دقيقة', plural: 'دقائق' },
+            hour: { singular: 'ساعة', plural: 'ساعات' },
+            day: { singular: 'يوم', plural: 'أيام' },
+            week: { singular: 'أسبوع', plural: 'أسابيع' },
+            month: { singular: 'شهر', plural: 'أشهر' },
+            year: { singular: 'عام', plural: 'أعوام' }
         };
-      
+
         if (diffInSeconds < 5) return 'الآن';
         if (diffInSeconds < 60) return `منذ ${diffInSeconds} ${getArabicUnit(diffInSeconds, units.second)}`;
-        
+
         const diffInMinutes = Math.floor(diffInSeconds / 60);
         if (diffInMinutes < 60) return `منذ ${diffInMinutes} ${getArabicUnit(diffInMinutes, units.minute)}`;
-        
+
         const diffInHours = Math.floor(diffInMinutes / 60);
         if (diffInHours < 24) return `منذ ${diffInHours} ${getArabicUnit(diffInHours, units.hour)}`;
-        
+
         const diffInDays = Math.floor(diffInHours / 24);
         if (diffInDays < 7) return `منذ ${diffInDays} ${getArabicUnit(diffInDays, units.day)}`;
-        
+
         const diffInWeeks = Math.floor(diffInDays / 7);
         if (diffInWeeks < 4) return `منذ ${diffInWeeks} ${getArabicUnit(diffInWeeks, units.week)}`;
-        
+
         const diffInMonths = Math.floor(diffInDays / 30);
         if (diffInMonths < 12) return `منذ ${diffInMonths} ${getArabicUnit(diffInMonths, units.month)}`;
-        
+
         const diffInYears = Math.floor(diffInDays / 365);
         return `منذ ${diffInYears} ${getArabicUnit(diffInYears, units.year)}`;
-      }
-      
-      // Helper function to choose singular/plural form
-      function getArabicUnit(number, unit) {
-        return number === 1 ? unit.singular : 
-               number === 2 ? unit.singular + 'ان' : 
-               number > 2 && number < 11 ? unit.plural : 
-               unit.singular;
-      }
+    }
+
+    // Helper function to choose singular/plural form
+    function getArabicUnit(number, unit) {
+        return number === 1 ? unit.singular :
+            number === 2 ? unit.singular + 'ان' :
+                number > 2 && number < 11 ? unit.plural :
+                    unit.singular;
+    }
     useEffect(() => {
         if (!id) return;
 
@@ -108,6 +112,8 @@ const PropertyDetailsScreen = ({ }) => {
                 });
                 if (!response.ok) throw new Error('Failed to fetch property');
                 const data = await response.json();
+                setIsReserved(data.is_reserved);
+                setCanViewLocation(data.can_view_location); // Add this line
 
                 // Combine main photo with additional images if available
                 let images = [];
@@ -121,17 +127,17 @@ const PropertyDetailsScreen = ({ }) => {
                 const features = (data.realestate && data.realestate.basics) ? data.realestate.basics : [];
                 const additionalInfo = (data.realestate && data.realestate.extras) ? data.realestate.extras : [];
                 const allReviews = [
-                    ...data.comments.map(c => ({ 
-                      ...c, 
-                      type: 'review', 
-                      date: getRelativeTime(c.createAt)
+                    ...data.comments.map(c => ({
+                        ...c,
+                        type: 'review',
+                        date: getRelativeTime(c.createAt)
                     })),
-                    ...data.secondcomments.map(c => ({ 
-                      ...c, 
-                      type: 'second_review', 
-                      date: getRelativeTime(c.createAt)
+                    ...data.secondcomments.map(c => ({
+                        ...c,
+                        type: 'second_review',
+                        date: getRelativeTime(c.createAt)
                     }))
-                  ].sort((a, b) => new Date(b.createAt) - new Date(a.createAt));
+                ].sort((a, b) => new Date(b.createAt) - new Date(a.createAt));
                 setProperty({
                     ...data.realestate,
                     images,
@@ -155,15 +161,18 @@ const PropertyDetailsScreen = ({ }) => {
 
 
     const handleImageScroll = Animated.event(
-        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-        {
-            useNativeDriver: false,
-            listener: event => {
-                const index = Math.floor(event.nativeEvent.contentOffset.x / width);
-                setCurrentImageIndex(index);
-            },
-        }
-    );
+  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+  {
+    useNativeDriver: true, // تغيير هذه القيمة إلى true
+    listener: event => {
+      const offsetX = event.nativeEvent.contentOffset.x;
+      const newIndex = Math.round(offsetX / width);
+      if (newIndex !== currentImageIndex) {
+        setCurrentImageIndex(newIndex);
+      }
+    },
+  }
+);
 
     const animatePress = (animationRef) => {
         Animated.sequence([
@@ -190,7 +199,7 @@ const PropertyDetailsScreen = ({ }) => {
             });
 
             const data = await response.json();
-            console.log('Detail toggle response: ', data);
+         
 
             // Update local favorite state
             setIsFavorite(data.is_favorite);
@@ -203,7 +212,7 @@ const PropertyDetailsScreen = ({ }) => {
         try {
             animatePress(scaleValue);
             await Share.share({
-                message: `تحقق من هذا العقار: ${property.title}\nالسعر: $${property.price}`,
+                message: `تحقق من هذا العقار: ${property.title}\nالسعر: $${property.price_with_benefit}`,
                 url: API_BASE_URL + '/properties/' + property.id,
                 title: property.title
             });
@@ -227,41 +236,32 @@ const PropertyDetailsScreen = ({ }) => {
     );
 
 
-    const renderPagination = () => {
-        return (
-            <View style={styles.pagination}>
-                {property.images.map((_, i) => {
-                    const inputRange = [
-                        (i - 1) * width,
-                        i * width,
-                        (i + 1) * width,
-                    ];
+   const renderPagination = () => {
+    if (!property.images || property.images.length === 0) return null;
 
-                    const opacity = scrollX.interpolate({
-                        inputRange,
-                        outputRange: [0.5, 1, 0.5],
-                        extrapolate: 'clamp',
-                    });
-
-                    const scale = scrollX.interpolate({
-                        inputRange,
-                        outputRange: [0.8, 1.2, 0.8],
-                        extrapolate: 'clamp',
-                    });
-
-                    return (
-                        <Animated.View
-                            key={i}
-                            style={[
-                                styles.paginationDot,
-                                { opacity, transform: [{ scale }] },
-                            ]}
-                        />
-                    );
-                })}
+    return (
+        <View style={styles.paginationContainer}>
+            {/* العداد الحالي/الإجمالي */}
+            <View style={styles.currentIndexContainer}>
+                <Text style={styles.currentIndexText}>
+                    {currentImageIndex + 1}/{property.images.length}
+                </Text>
             </View>
-        );
-    };
+ 
+            {/* إجمالي عدد الصور */}
+                    <View style={styles.totalImagesContainer}>
+                                    <Image
+                                        source={require('@/assets/images/camera.png')}
+                                        style={styles.camera}
+                                    />
+            <Text style={styles.totalImagesText}>
+                           
+                عدد الصور : {property.images.length}
+            </Text>
+            </View>
+        </View>
+    );
+};
 
 
     const renderReviewItem = ({ item }) => (
@@ -291,12 +291,19 @@ const PropertyDetailsScreen = ({ }) => {
 
     const renderFeatureItem = ({ item }) => (
         <View style={styles.featureItem}>
-            <Text style={styles.featureText}>{item.describtion}</Text>
-            <Image
-                source={{ uri: item.photo }}
-                style={styles.featureIcon}
-            />
-        </View>
+       
+                   <Text style={styles.featureText}>{item.describtion === 'اتساعية الكراج' ? `${item.describtion} : ${property.cars} سيارات` :
+                   item.describtion === 'غرف النوم' ? `${item.describtion} : ${property.rooms}` :
+                       item.describtion === 'الحمامات' ? `${item.describtion} : ${property.bathrooms}` :
+                           item.describtion === 'العدد الاقصى للأشخاص' ? `${item.describtion} : ${property.max_members}` :
+                               item.describtion}
+                               </Text>
+                   <Image
+                       source={{ uri: item.photo }}
+                       style={styles.featureIcon}
+                   />
+       
+               </View>
     );
 
     const renderAdditionalInfoItem = ({ item }) => (
@@ -311,8 +318,10 @@ const PropertyDetailsScreen = ({ }) => {
 
 
     const handleOpenMap = async () => {
-        // Check if the property has valid location data.
-        if (property.latitude && property.longitude) {
+        if (!canViewLocation) {
+            Alert.alert('غير مسموح', 'يجب عليك حجز العقار أولاً لرؤية الموقع');
+            return;
+        } if (property.latitude && property.longitude) {
             const url = `https://www.google.com/maps/search/?api=1&query=${property.latitude},${property.longitude}`;
             try {
                 await Linking.openURL(url);
@@ -365,16 +374,24 @@ const PropertyDetailsScreen = ({ }) => {
 
                     {/* أزرار الأعلى */}
                     <View style={styles.topActions}>
-                        <TouchableOpacity
-                            style={styles.iconButton}
-                            onPress={() => navigation.navigate('gallary')}
-                            activeOpacity={0.7}
-                        >
-                            <Image
-                                source={require('@/assets/images/close.png')}
-                                style={styles.actionIcon}
-                            />
-                        </TouchableOpacity>
+                       <TouchableOpacity
+      style={styles.iconButton}
+      onPress={() => {
+        // إذا كانت معلمة 'from' تساوي 'hajesakar'
+        if (from === 'HajesAqar'|| from === 'addComment'|| from === 'Done'||from === 'DoneOwner') {
+          navigation.navigate('gallary');
+        } else {
+          navigation.goBack();
+        }
+      }}
+      activeOpacity={0.7}
+    >
+      <Image
+        source={require('@/assets/images/close2.png')}
+        style={styles.actionIcon}
+      />
+    </TouchableOpacity>
+
 
                         <View style={styles.leftActions}>
 
@@ -394,7 +411,7 @@ const PropertyDetailsScreen = ({ }) => {
                                         source={require('@/assets/images/Favorite.png')}
                                         style={[
                                             styles.actionIcon,
-                                            { tintColor: isFavorite ? 'red' : '#000' },
+                                            { tintColor: isFavorite ? 'red' : '#fff' },
                                             isFavorite && styles.favoriteIconActive,
                                         ]}
                                     />
@@ -427,17 +444,33 @@ const PropertyDetailsScreen = ({ }) => {
                 >
                     {/* العنوان و الموقع */}
                     <View style={styles.header}>
-                        <View>
-                            <Text style={styles.ID}>ID:{property.id}</Text>
-                            <TouchableOpacity
-                                onPress={handleOpenMap}
-                                activeOpacity={0.7}
-                            >
-                                <Image
-                                    source={require('@/assets/images/map.png')}
-                                    style={styles.map}
-                                />
-                            </TouchableOpacity>
+                        <View style={styles.idLocationContainer}>
+                            <Text style={styles.locationText}>
+                                {property.city}-{property.town}
+                            </Text>
+                            <View style={styles.idLocationRow}>
+
+
+                                <Text style={styles.ID}>
+                                    ID:{property.id}
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={handleOpenMap}
+                                    activeOpacity={0.7}
+                                    style={styles.locbtn}
+                                >
+                                    <Image
+                                        source={require('@/assets/images/map.png')}
+                                        style={styles.map}
+                                    />
+                                    <Text style={styles.loctext}>  استكشاف</Text>
+                                </TouchableOpacity>
+                            </View>
+
+
+
+
+
                         </View>
                         <Text style={styles.title}>{property.title}</Text>
 
@@ -537,27 +570,32 @@ const PropertyDetailsScreen = ({ }) => {
 
 
                     <View style={styles.reviewsContainer1} >
-                       <TouchableOpacity
-    style={styles.addCommentBtn}
-    activeOpacity={0.7}
-    onPress={() => {
-        if (!user?.token) {
-            Alert.alert('خطأ', 'يجب تسجيل الدخول أولاً');
-            navigation.navigate('loginpage');
-            return;
-        }
-        navigation.navigate('addComment', { id: property.id });
-    }}
->
-    <Text style={styles.addCommentText}>أضف تعليق</Text>
-</TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.addCommentBtn}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                                if (!user?.token) {
+                                    Alert.alert('خطأ', 'يجب تسجيل الدخول أولاً');
+                                    navigation.navigate('loginpage');
+                                    return;
+                                }
+                                if (!isReserved) {
+                                    Alert.alert('غير مسموح', 'يجب عليك حجز العقار أولاً قبل إضافة تعليق');
+                                    return;
+                                }
+
+                                navigation.navigate('addComment', { id: property.id });
+                            }}
+                        >
+                            <Text style={styles.addCommentText}>أضف تعليق</Text>
+                        </TouchableOpacity>
 
                     </View>
                 </ScrollView>
 
                 {/* زر الحجز */}
                 <View style={[styles.footer]}>
-                    <Text style={styles.priceText}>${property.price} / ليلة</Text>
+                    <Text style={styles.priceText}>${property.price_with_benefit} / اليوم</Text>
                     <Animated.View style={[{ transform: [{ scale: scaleValue }] }]}>
                         <TouchableOpacity
                             style={styles.bookButton}
@@ -603,34 +641,27 @@ const styles = StyleSheet.create({
     leftActions: {
         flexDirection: 'row',
         borderRadius: 20,
-        padding: 5,
+        
     },
     iconButton: {
-        width: 40,
-        height: 40,
+        width: 37,
+        height: 37,
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
         marginHorizontal: 5,
-        backgroundColor: 'rgba(102, 100, 100, 0.7)',
+        backgroundColor: 'rgba(0, 0, 0, 0.67)',
     },
     actionIcon: {
-        width: 24,
-        height: 24,
-        tintColor: '#000',
+        width: 20,
+        height: 20,
+        tintColor: '#fff',
     },
 
     favoriteIconActive: {
         tintColor: 'red', // لون الأيقونة أحمر عند التفعيل
     },
-    pagination: {
-        position: 'absolute',
-        bottom: 15,
-        alignSelf: 'center',
-        flexDirection: 'row',
-        borderRadius: 10,
-        padding: 5,
-    },
+ 
     content: {
         flex: 1,
     },
@@ -648,8 +679,70 @@ const styles = StyleSheet.create({
         color: '#333',
         flex: 1,
         textAlign: 'right',
+
         fontFamily: 'NotoKufiArabic-Bold',
     },
+    idLocationContainer: {
+
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        borderBottomColor: 'gray',
+        borderBottomWidth: 1,
+        paddingBottom: 10,
+    },
+    idLocationRow: {
+        width: '100%',
+
+        display: 'flex',
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+
+    },
+    locationText: {
+        marginBottom: 5,
+        width: '100%',
+        textAlign: 'right',
+        fontSize: 18,
+        color: '#000',
+        fontFamily: 'NotoKufiArabic-Bold', // استبدلها بخطك المفضل
+    },
+    locbtn: {
+        width: 'auto',
+        display: 'flex',
+        flexDirection: 'row',
+        backgroundColor: '#4D4FFF',
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 2,
+        fontFamily: 'NotoKufiArabic-Regular',
+        overflow: 'visible',
+        marginLeft: 2,
+    },
+    loctext: {
+        fontSize: 16,
+        color: '#fff',
+        fontFamily: 'NotoKufiArabic-Regular',
+    },
+    map: {
+        width: 20,
+        height: 25,
+        tintColor: '#fff',
+        marginRight: 10,
+        marginLeft: 5,
+    },
+    ID: {
+        fontSize: 15,
+        color: '#000',
+        fontFamily: 'NotoKufiArabic-Regular',
+
+    },
+
+
     priceText: {
         fontSize: 20,
         color: '#fff',
@@ -774,8 +867,8 @@ const styles = StyleSheet.create({
         height: 'auto',
         marginRight: 5,
         fontFamily: 'NotoKufiArabic-Regular',
-        borderWidth:0.5,
-        borderColor:'#CCC'
+        borderWidth: 0.5,
+        borderColor: '#CCC'
     },
     reviewHeader: {
         flexDirection: 'row',
@@ -796,7 +889,7 @@ const styles = StyleSheet.create({
 
     },
     starIcon: {
-        tintColor:'gold',
+        tintColor: 'gold',
         width: 35,
         height: 35,
     },
@@ -827,7 +920,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 10,
-        paddingVertical:2,
+        paddingVertical: 2,
         marginBottom: 30,
         fontFamily: 'NotoKufiArabic-Regular',
     },
@@ -846,11 +939,10 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        padding: 15,
+        padding: 10,
         backgroundColor: '#4D4FFF',
         borderTopWidth: 1,
         borderTopColor: '#eee',
-        paddingTop: 10,
         fontFamily: 'NotoKufiArabic-Regular',
 
     },
@@ -861,50 +953,74 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 2,
         alignItems: 'center',
-        borderWidth:1, 
-        borderColor:'#fff'
+        borderWidth: 1,
+        borderColor: '#fff'
     },
     bookButtonText: {
         color: '#fff',
         fontSize: 20,
         fontFamily: 'NotoKufiArabic-Regular',
     },
-    map: {
-        width: 70,
-        height: 70,
 
-    },
-    ID: {
-        fontSize: 15,
-        color: '#000',
-        fontFamily: 'NotoKufiArabic-Regular',
 
-    },
 
-    pagination: {
-        position: 'absolute',
-        bottom: 15,
-        alignSelf: 'center',
-        flexDirection: 'row',
-    },
+ 
 
-    paginationDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#4D4FFF',
-        marginHorizontal: 5,
-        opacity: 0.5, // إضافة عتامة افتراضية
-        fontFamily: 'NotoKufiArabic-Regular',
-    },
+ 
     Person: {
-
+tintColor:'#4d4fff',
         width: 60,
         height: 60,
     },
-    activeDot: {
-
+ 
+   
+    paginationContainer: {
+        position: 'absolute',
+        bottom: 15,
+        left: 0,
+        right: 0,
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
     },
+    currentIndexContainer: {
+        backgroundColor: 'rgba(0, 0, 0, 0.67)',
+        borderRadius: 15,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    currentIndexText: {
+        color: 'white',
+        fontSize: 14,
+        fontFamily: 'NotoKufiArabic-Bold',
+    },
+    totalImagesText: {
+        alignItems:'center',
+       
+        color: '#fff',
+        fontSize: 14,
+        fontFamily: 'NotoKufiArabic-Regular',
+       
+    },
+    totalImagesContainer:{
+ display:'flex',
+  borderRadius: 15,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        flexDirection:'row-reverse',
+        alignItems:'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.67)',
+        alignSelf: 'flex-end',
+
+    }
+,
+    camera: {
+     width:25,
+     height:25,
+     tintColor:'#fff',
+     marginLeft:5,
+    },
+
 });
 
-export default PropertyDetailsScreen;
+export default CardDitals;

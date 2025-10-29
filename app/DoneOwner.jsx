@@ -14,12 +14,12 @@ const Done = () => {
     <View style={styles.container}>
       <Image source={sh} style={styles.welcome} />
       <Text style={styles.welAvar}>تم حجز عطلتك الخاصة بنجاح</Text>
-      <Text style={styles.urwindow}>شكرا لإستعمالك خدمة AVAR</Text>
+      <Text style={styles.urwindow}>شكرا لإستعمالك خدمة RÊVE</Text>
       <View style={styles.confcont}>
         <TouchableOpacity
           style={styles.conf}
           // Pass the id to CardDitals to ensure it refreshes correctly
-          onPress={() => navigation.navigate('CardDitalsOwner', { id })}
+          onPress={() => navigation.navigate('CardDitalsOwner', { from: 'Done',id })}
         >
           <Text style={styles.confText}>موافق</Text>
         </TouchableOpacity>

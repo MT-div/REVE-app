@@ -1,17 +1,17 @@
-import { Stack } from "expo-router";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
-import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect } from 'react';
 import { useFonts } from 'expo-font';
-import { AuthProvider } from '../src/context/AuthContext'; // ADD THIS IMPORT
+import { Stack } from "expo-router";
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from 'react';
 import { I18nManager } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import BackButtonHandler from '../src/components/BackButtonHandler';
+import { AuthProvider } from '../src/context/AuthContext'; // ADD THIS IMPORT
 SplashScreen.preventAutoHideAsync();
 
 // ── إجبار التطبيق على RTL ومنع التبديل التلقائي ──
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+I18nManager.allowRTL(false);
+I18nManager.forceRTL(false);
 I18nManager.doLeftAndRightSwapInRTL = true
 
 export default function RootLayout() {
@@ -41,17 +41,13 @@ export default function RootLayout() {
       />
       {/* WRAP STACK WITH AUTH PROVIDER */}
       <AuthProvider>
+      <BackButtonHandler />
         <Stack>
           <Stack.Screen name="index" options={{ title: "home", headerShown: false }} />
-          <Stack.Screen name="home" options={{ title: "home", headerShown: false }} />
           <Stack.Screen name="loginpage" options={{ title: "login", headerShown: false }} />
-          <Stack.Screen name="newAccount" options={{ title: "NewAccount", headerShown: false }} />
-          <Stack.Screen name="newAccount2" options={{ title: "NewAccount2", headerShown: false }} />
           <Stack.Screen name="welcome" options={{ title: "welcome", headerShown: false }} />
           <Stack.Screen name="gallary" options={{ title: "gallary", headerShown: false }} />
           <Stack.Screen name="profile" options={{ title: "profile", headerShown: false }} />
-          <Stack.Screen name="editAccount" options={{ title: "editAccount", headerShown: false }} />
-          <Stack.Screen name="editAccount2" options={{ title: "editAccount2", headerShown: false }} />
           <Stack.Screen name="notifications" options={{ title: "notifications", headerShown: false }} />
           <Stack.Screen name="confedit" options={{ title: "confedit", headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: "settings", headerShown: false }} />
@@ -59,7 +55,6 @@ export default function RootLayout() {
           <Stack.Screen name="reg" options={{ title: "reg", headerShown: false }} />
           <Stack.Screen name="confreg" options={{ title: "confreg", headerShown: false }} />
           <Stack.Screen name="favoritepage" options={{ title: "favoritepage", headerShown: false }} />
-          <Stack.Screen name="signup" options={{ title: "signup", headerShown: false }} />
           <Stack.Screen name="edit" options={{ title: "edit", headerShown: false }} />
           <Stack.Screen name="CardDitals" options={{ title: "CardDitals", headerShown: false }} />
           <Stack.Screen name="Calendar" options={{ title: "Calendar", headerShown: false }} />
@@ -74,6 +69,7 @@ export default function RootLayout() {
           <Stack.Screen name="DaysOff" options={{ title: "DaysOff", headerShown: false }} />
           <Stack.Screen name="signupPerson" options={{ title: "signupPerson", headerShown: false }} />
           <Stack.Screen name="signupUser" options={{ title: "signupUser", headerShown: false }} />
+          <Stack.Screen name="term_n_policy" options={{ title: "term_n_policy", headerShown: false }} />
 
           <Stack.Screen name="+not-found" />
         </Stack>

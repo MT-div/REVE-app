@@ -1,32 +1,58 @@
-import React, { useState } from 'react';
+
+import arrow from '@/assets/images/arrow.png';
+import star from '@/assets/images/star.png';
+import { useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   Dimensions,
   FlatList,
   Image,
-  Alert
+  Modal,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useLocalSearchParams } from 'expo-router'; // To get the real estate id (pk) from route params
-import { useAuth } from '../src/context/AuthContext'; // Adjust the path as needed
-import { API_BASE_URL } from './config'; // Adjust the path as needed
-import close from '@/assets/images/close.png';
-import star from '@/assets/images/star.png';
+import { useAuth } from '../src/context/AuthContext';
+import { API_BASE_URL } from './config/config';
 
-// Star icon component remains unchanged.
+// Add ErrorMessageModal component
+const ErrorMessageModal = ({ visible, message, onClose }) => {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.errorModalOverlay}>
+          <View style={styles.errorModalContainer}>
+            <Text style={styles.errorModalText}>{message}</Text>
+            <TouchableOpacity
+              style={styles.errorModalButton}
+              onPress={onClose}
+            >
+              <Text style={styles.errorModalButtonText}>موافق</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+};
+
 const StarIcon = ({ filled, onPress }) => (
-
-
   <TouchableOpacity onPress={onPress}>
     <Image
       source={
         filled
-          ? require('@/assets/images/star.png') // Filled star
-          : require('@/assets/images/starEmpty.png') // Empty star
+          ? require('@/assets/images/star.png')
+          : require('@/assets/images/starEmpty.png')
       }
       style={styles.starIcon}
     />
@@ -34,26 +60,31 @@ const StarIcon = ({ filled, onPress }) => (
 );
 
 const addComment = () => {
-  // Grab the property id from the route parameters so we can send it to the review endpoint.
   const { id } = useLocalSearchParams();
   const navigation = useNavigation();
-  const { user } = useAuth(); // Contains the token and other user info
+  const { user } = useAuth();
   const [comment, setComment] = useState('');
   const [rating, setRating] = useState(0);
-  const [commentsList, setCommentsList] = useState([
+  const [commentsList, setCommentsList] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorVisible, setErrorVisible] = useState(false);
 
-  ]);
-
-  // This function now calls the backend create_review endpoint.
   const handleSubmit = async () => {
-     if (comment.trim() && rating === 0) {
-          Alert.alert('تنبيه', 'قم يتقييم العقار ');
-          return;
-        }
-        if (rating > 0 && !comment.trim()) {
-          Alert.alert('تنبيه', 'قم باضافة تعليق ');
-          return;
-        }
+    if (comment.trim() && rating === 0) {
+      setErrorMessage('قم بتقييم العقار');
+      setErrorVisible(true);
+      return;
+    }
+    if (rating > 0 && !comment.trim()) {
+      setErrorMessage('قم بإضافة تعليق');
+      setErrorVisible(true);
+      return;
+    }
+    if (!comment.trim() && rating === 0) {
+      setErrorMessage('يرجى كتابة التعليق وتحديد التقييم');
+      setErrorVisible(true);
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/review/${id}/`, {
         method: 'POST',
@@ -61,13 +92,12 @@ const addComment = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.token}`
         },
-
         body: JSON.stringify({ rating: rating, comment: comment })
       });
       if (response.ok) {
         const result = await response.json();
-        Alert.alert('نجاح', 'تم إرسال التعليق بنجاح');
-        // Optionally, update your comments list with the new comment.
+        setErrorMessage('تم إرسال التعليق بنجاح');
+        setErrorVisible(true);
         const newComment = {
           id: Date.now().toString(),
           text: comment,
@@ -81,11 +111,13 @@ const addComment = () => {
       } else {
         const errorData = await response.json();
         console.error('Error creating review:', errorData);
-        Alert.alert('خطأ', 'فشل في إرسال التعليق');
+        setErrorMessage('فشل في إرسال التعليق');
+        setErrorVisible(true);
       }
     } catch (error) {
       console.error('Network error:', error);
-      Alert.alert('خطأ', 'حدث خطأ أثناء إرسال التعليق');
+      setErrorMessage('حدث خطأ أثناء إرسال التعليق');
+      setErrorVisible(true);
     }
   };
 
@@ -105,7 +137,6 @@ const addComment = () => {
 
   const renderComment = ({ item }) => (
     <View style={styles.commentContainer}>
-      {/* Header: Avatar and Author Name */}
       <View style={styles.ratingRow}>
         <View style={styles.holder2}>
           <Image
@@ -114,28 +145,37 @@ const addComment = () => {
           />
           <Text style={styles.author}>{item.author}</Text>
         </View>
-        {/* Rating and duration */}
         <View style={styles.holder2}>
           <Text style={styles.commentDuration}>{item.duration}</Text>
           <Text style={styles.rate}>{item.rating}</Text>
           <Image source={star} style={styles.star} />
         </View>
       </View>
-      {/* Comment Text */}
       <Text style={styles.commentText}>{item.text}</Text>
     </View>
   );
 
-
   return (
     <View style={styles.container}>
-      <View style={styles.topHolder}>
-        <TouchableOpacity onPress={() => navigation.replace("CardDitalsOwner", { id })}>
-          <Image source={close} style={styles.close} />
+      <StatusBar
+              style="light" // اختر "light" أو "dark" حسب خلفية التطبيق
+              hidden={false} // قم بعرض أو إخفاء البار العلوي
+              translucent={true} // جعل البار شفافًا إذا أردت
+              backgroundColor="#4D4FFF" // لون الخلفية إذا كان غير شفاف
+            />
+      <ErrorMessageModal
+        visible={errorVisible}
+        message={errorMessage}
+        onClose={() => setErrorVisible(false)}
+      />
+      
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={() => navigation.replace("CardDitalsOwner", { from: 'addCommentOwner',id })}>
+          <Image source={arrow} style={styles.arrowIcon} />
         </TouchableOpacity>
-        <Text style={styles.header}>إضافة تعليق</Text>
+        <Text style={styles.title}>إضافة تعليق</Text>
       </View>
-      {/* Comment Input */}
+      
       <View style={styles.commentHolder}>
         <TextInput
           style={styles.input}
@@ -147,22 +187,18 @@ const addComment = () => {
           textAlignVertical="top"
         />
         <View style={styles.holder}>
-
-          {/* Submit Button */}
           <TouchableOpacity
             style={styles.submitButton}
             onPress={handleSubmit}
-            disabled={!comment.trim() || rating === 0}
           >
             <Text style={styles.buttonText}>إرسال</Text>
           </TouchableOpacity>
-          {/* Star Rating */}
           <View style={styles.ratingSection}>
             {renderStars(rating)}
           </View>
         </View>
       </View>
-      {/* Comments List */}
+      
       <FlatList
         data={commentsList}
         renderItem={renderComment}
@@ -173,12 +209,10 @@ const addComment = () => {
   );
 };
 
-
 const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#fff',
   },
   topHolder: {
@@ -199,11 +233,35 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
+  headerContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(149, 147, 147, 0.69)',
+    paddingBottom: 10,
+    paddingTop:30,
+paddingRight:10,
+backgroundColor: '#4d4fff',
+  },
+  title: {
+    fontSize: 25,
+    textAlign: 'right',
+    marginTop: -8,
+    fontFamily: 'NotoKufiArabic-Bold',
+
+  },
+  arrowIcon: {
+    width: 40,
+    height: 40,
+  },
   commentHolder: {
     borderRadius: 20,
     backgroundColor: '#f5f5f5',
     padding: 20,
     marginBottom: 20,
+    marginRight:20,
+    marginLeft:20,
   },
   input: {
     width: '100%',
@@ -228,6 +286,7 @@ const styles = StyleSheet.create({
   starIcon: {
     width: 30,
     height: 30,
+    
   },
   submitButton: {
     backgroundColor: '#4D4FFF',
@@ -258,6 +317,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   Person: {
+    tintColor:'#4d4fff',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -282,14 +342,49 @@ const styles = StyleSheet.create({
   author: {
     fontSize: 16,
     fontFamily: 'NotoKufiArabic-Regular',
-
   },
   star: {
     width: 30,
     height: 30,
+    tintColor:'gold'
   },
   commentsList: {
     paddingBottom: 30,
+    marginRight:20,
+    marginLeft:20,
+  },
+  errorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorModalContainer: {
+    backgroundColor: '#fff',
+    width: '80%',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4D4FFF',
+  },
+  errorModalText: {
+    fontSize: 18,
+    textAlign: 'center',
+    fontFamily: 'NotoKufiArabic-Regular',
+    color: '#333',
+    marginBottom: 20,
+  },
+  errorModalButton: {
+    backgroundColor: '#4D4FFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+  },
+  errorModalButtonText: {
+    color: '#fff',
+    fontFamily: 'NotoKufiArabic-Bold',
+    fontSize: 16,
   },
 });
 

@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, TouchableOpacity, StyleSheet, FlatList, Image, ScrollView,Alert
-} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import moment from 'moment';
-import { useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
-import { API_BASE_URL } from './config';
+import { useLocalSearchParams } from 'expo-router';
+import moment from 'moment';
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  FlatList, Image, ScrollView,
+  StyleSheet,
+  Text, TouchableOpacity,
+  View
+} from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
-
+import { API_BASE_URL } from './config/config';
+import GestureRecognizer from 'react-native-swipe-gestures';
 import close from '@/assets/images/close.png';
 
 const Calendar = () => {
@@ -202,9 +206,31 @@ const Calendar = () => {
       </TouchableOpacity>
     );
   };
-  
-
-  return (
+    const isEidPeriodIncomplete = (start, end) => {
+    const eidStart = moment().month(5).date(6); // 6 يونيو
+    const eidEnd = moment().month(5).date(9);   // 9 يونيو
+    
+    // إذا كانت الفترة المحددة لا تتداخل مع العيد
+    if (end.isBefore(eidStart)) return false;
+    if (start.isAfter(eidEnd)) return false;
+    
+    // تحقق إذا كانت تشمل كل أيام العيد
+    const coversFullEid = 
+      start.isSameOrBefore(eidStart) && 
+      end.isSameOrAfter(eidEnd);
+    
+    return !coversFullEid;
+ };
+ return (
+    <GestureRecognizer
+      onSwipeLeft={() => changeMonth(1)}
+      onSwipeRight={() => changeMonth(-1)}
+      config={{
+        velocityThreshold: 0.3,
+        directionalOffsetThreshold: 80,
+      }}
+      style={{ flex: 1 }}
+    >
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -263,6 +289,15 @@ const Calendar = () => {
         style={[styles.saveButton, (!selectedRange.start || !selectedRange.end) && styles.disabledButton]}
         onPress={() => {
           if (selectedRange.start && selectedRange.end) {
+            // التحقق من حجز العيد
+            if (isEidPeriodIncomplete(selectedRange.start, selectedRange.end.clone().add(1, 'day'))) {
+              Alert.alert(
+                "خطأ",
+                "لا يمكنك حجز جزء من العيد، يجب حجز الفترة كاملة (من 6 الى 9 حزيران)"
+              );
+              return;
+            }
+            
             navigation.navigate('HajesAqar', { 
               id, 
               startDate: selectedRange.start.format('YYYY-MM-DD'), 
@@ -290,8 +325,10 @@ const Calendar = () => {
         </View>
       </View>
     </View>
+ </GestureRecognizer>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

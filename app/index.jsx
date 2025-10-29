@@ -1,22 +1,19 @@
-import React, { useEffect } from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, ImageBackground, StatusBar } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import * as Animatable from 'react-native-animatable';
 import back from '@/assets/images/16.png';
 import logoimg from '@/assets/images/splash.png';
-import { scale } from '../src/utils/scaling';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { useEffect } from 'react';
+import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Animatable from 'react-native-animatable';
 import { useAuth } from '../src/context/AuthContext';
 
-const HomePage = () => {
+const index = () => {
   const navigation = useNavigation();
   const { login, user } = useAuth();
 
   useEffect(() => {
     // Only automatically navigate if the user is fully authenticated.
     if (user && user.token ) {
-      console.log("112  2211");
-      console.log(user.token);
+    
       navigation.navigate('gallary');
     }
   }, [user, navigation]);
@@ -70,7 +67,7 @@ const HomePage = () => {
         >
           <TouchableOpacity
             style={styles.privacyButton}
-            onPress={() => navigation.navigate('Privacy')}
+            onPress={() => navigation.navigate('term_n_policy')}
           >
             <Text style={styles.privacyText}>بنود الخدمة و الخصوصية</Text>
           </TouchableOpacity>
@@ -117,8 +114,8 @@ const styles = StyleSheet.create({
     borderRadius: 50, // اختياري لزوايا مدورة
   },
   logo: {
-    width: '60%',
-    height: '50%',
+    width: 500,
+    height: 220,
     marginTop: 80,
     zIndex: 1, //
 
@@ -185,4 +182,4 @@ const styles = StyleSheet.create({
 });
 
 
-export default HomePage;
+export default index;

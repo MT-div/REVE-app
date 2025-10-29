@@ -1,136 +1,168 @@
-import React, { useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+
+import Done from '@/assets/images/Done.png';
+import arrow from '@/assets/images/arrow.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from './config';
+import { Picker } from '@react-native-picker/picker';
+import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
 import {
+  Image,
+  Modal,
   SafeAreaView,
   ScrollView,
-  View,
-  Text,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  Alert,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import Done from '@/assets/images/Done.png';
-import cancel from '@/assets/images/cancel.png';
-import arrow from '@/assets/images/arrow.png'; 
+import { API_BASE_URL } from './config/config';
 
-const HomePage = () => {
+const ErrorMessageModal = ({ visible, message, onClose }) => {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.errorModalOverlay}>
+          <View style={styles.errorModalContainer}>
+            <Text style={styles.errorModalText}>{message}</Text>
+            <TouchableOpacity
+              style={styles.errorModalButton}
+              onPress={onClose}
+            >
+              <Text style={styles.errorModalButtonText}>موافق</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+};
+
+const reg = () => {
   const navigation = useNavigation();
   const [region, setRegion] = useState('');
   const [type, setType] = useState('');
   const [details, setDetails] = useState('');
   const [moredetails, setMoreDetails] = useState('');
-
-  // Error state for each field
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorVisible, setErrorVisible] = useState(false);
   const [regionError, setRegionError] = useState(false);
   const [typeError, setTypeError] = useState(false);
   const [detailsError, setDetailsError] = useState(false);
   const [moreDetailsError, setMoreDetailsError] = useState(false);
 
-  const handleSend = async () => {
-    let isValid = true;
+const handleSend = async () => {
+  let isValid = true;
 
-    if (!region) {
-      setRegionError(true);
-      isValid = false;
-    } else {
-      setRegionError(false);
-    }
+  if (!region) {
+    setRegionError(true);
+    isValid = false;
+  } else {
+    setRegionError(false);
+  }
 
-    if (!type) {
-      setTypeError(true);
-      isValid = false;
-    } else {
-      setTypeError(false);
-    }
+  if (!type) {
+    setTypeError(true);
+    isValid = false;
+  } else {
+    setTypeError(false);
+  }
 
-    if (!details.trim()) {
-      setDetailsError(true);
-      isValid = false;
-    } else {
-      setDetailsError(false);
-    }
+  if (!details.trim()) {
+    setDetailsError(true);
+    isValid = false;
+  } else {
+    setDetailsError(false);
+  }
 
-    if (!moredetails.trim()) {
-      setMoreDetailsError(true);
-      isValid = false;
-    } else {
-      setMoreDetailsError(false);
-    }
+  if (!moredetails.trim()) {
+    setMoreDetailsError(true);
+    isValid = false;
+  } else {
+    setMoreDetailsError(false);
+  }
 
-    if (!isValid) {
-      Alert.alert("تنبيه", "يرجى ملئ جميع الحقول");
+  if (!isValid) {
+    setErrorMessage("يرجى ملئ جميع الحقول");
+    setErrorVisible(true);
+    return;
+  }
+
+  try {
+    const token = await AsyncStorage.getItem('authToken');
+
+    if (!token) {
+      setErrorMessage('يجب تسجيل الدخول أولاً');
+      setErrorVisible(true);
+      navigation.navigate('loginpage');
       return;
     }
 
-    try {
-      // Get user token from storage
-      const token = await AsyncStorage.getItem('authToken');
+    const requestData = {
+      city: region,
+      town: details,
+      type: type,
+      notes: moredetails,
+    };
 
-      if (!token) {
-        Alert.alert('خطأ', 'يجب تسجيل الدخول أولاً');
-        navigation.navigate('loginpage');
-        return;
-      }
+    const response = await fetch(`${API_BASE_URL}/new_realestate/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.replace(/"/g, '')}`
+      },
+      body: JSON.stringify(requestData)
+    });
 
-      // Prepare request data (make sure the keys match your Django model)
-      const requestData = {
-        city: region,
-        town: details,
-        type: type,
-        notes: moredetails,
-      };
+    const data = await response.json();
 
-      // Send POST request to your Django endpoint
-      const response = await fetch(`${API_BASE_URL}/new_realestate/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.replace(/"/g, '')}`
-        },
-        body: JSON.stringify(requestData)
-      });
-
-      // Parse the JSON response from the server
-      const data = await response.json();
-
-      // Handle 401 explicitly for session expiration
-      if (response.status === 401) {
-        Alert.alert('خطأ', 'انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
-        await AsyncStorage.removeItem('authToken');
-        navigation.navigate('login');
-        return;
-      }
-
-      // If the response is NOT ok (for instance, when the user already has a real estate entry)
-      if (!response.ok) {
-        // The error message from Django is sent via the "details" key
-        Alert.alert('خطأ', data.details || 'فشل في إرسال البيانات');
-        return;
-      }
-
-      // On success: show the success message and navigate accordingly
-      
-      navigation.navigate('confreg');
-
-    } catch (error) {
-      Alert.alert('خطأ', 'تعذر الاتصال بالخادم');
+    if (response.status === 401) {
+      setErrorMessage('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
+      setErrorVisible(true);
+      await AsyncStorage.removeItem('authToken');
+      navigation.navigate('login');
+      return;
     }
-  };
+
+    if (!response.ok) {
+      // Extract the first error message provided by the backend,
+      // for example: {"تنبيه!": "نرجو منك عدم كتابة كلمات غير محترمة"}
+      const errorKey = Object.keys(data)[0];
+      const errorMsg = data[errorKey] || 'فشل في إرسال البيانات';
+      setErrorMessage(errorMsg);
+      setErrorVisible(true);
+      return;
+    }
+    
+    navigation.navigate('confreg');
+
+  } catch (error) {
+    setErrorMessage('تعذر الاتصال بالخادم');
+    setErrorVisible(true);
+  }
+};
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={arrow} style={styles.arrowIcon} />
-        </TouchableOpacity>
-        <Text style={styles.title}>اضافة عقار </Text>
-      </View>
+        <ErrorMessageModal
+          visible={errorVisible}
+          message={errorMessage}
+          onClose={() => setErrorVisible(false)}
+        />
+
+        <View style={styles.headerContainer}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Image source={arrow} style={styles.arrowIcon} />
+          </TouchableOpacity>
+          <Text style={styles.title}>اضافة عقار </Text>
+        </View>
 
         <View style={styles.infocontainer}>
           <Text style={styles.welcomeMessage}>
@@ -142,7 +174,6 @@ const HomePage = () => {
         </View>
 
         <View style={styles.section}>
-          {/* Wrap Picker inside View to apply conditional styles */}
           <View style={[styles.pickerContainer, regionError && styles.errorInput]}>
             <Picker
               selectedValue={region}
@@ -221,197 +252,230 @@ const HomePage = () => {
             <Text style={styles.nextText}>ارسال </Text>
             <Image source={Done} style={styles.nextimg} />
           </TouchableOpacity>
-
-          
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-
 const styles = StyleSheet.create({
-  container: {
+    container: {
   
-    // إزالة استخدام flex:1 هنا والاعتماد على محتوى ScrollView
-  },
-  headerContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(149, 147, 147, 0.69)',
-    paddingBottom: 10,
-    paddingTop:30,
-    backgroundColor: '#4d4fff',
-
-  },
-  title: {
-    fontSize: 25,
-    textAlign: 'right',
-    marginTop: -8,
-    fontFamily: 'NotoKufiArabic-Bold',
-
-  },
-  arrowIcon: {
-    width: 40,
-    height: 40,
-  },
-  line: {
-    height: 2,
-    width: '100%',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    backgroundColor: 'rgba(149, 147, 147, 0.69)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 5,
-    shadowRadius: 10,
-    elevation: 15,
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  infocontainer: {
-    marginBottom: 20,
-    fontFamily: 'NotoKufiArabic-Regular',
-    marginRight:20,
-    marginLeft:20,
-  },
-  welcomeMessage: {
-    fontSize: 18,
-    marginBottom: 20,
-    textAlign: 'right',
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  ex: {
-    fontSize: 22,
-    textAlign: 'right',
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  section: {
-    marginBottom: 20,
-    fontFamily: 'NotoKufiArabic-Regular',
-    marginRight:20,
-    marginLeft:20,
-  },
-  pickerContainer: {
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    overflow: 'hidden',
-    marginBottom: 10,
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  picker: {
-    height: 'auto',
-    width: '100%',
-    textAlign: 'right',
-    paddingRight: 10,
-    backgroundColor:'#fff',
-
-
-  },
-  PickerItem: {
-    fontFamily: 'NotoKufiArabic-Regular',
-    fontSize: 15,
-    color: '#000'
-  },
-  placeinput: {
-    height: 'auto',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    textAlign: 'right',
-    marginBottom: 10,
-    fontFamily: 'NotoKufiArabic-Regular',
-    backgroundColor:'#fff',
+        // إزالة استخدام flex:1 هنا والاعتماد على محتوى ScrollView
+      },
+      headerContainer: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        marginBottom: 20,
+        borderBottomWidth: 2,
+        borderBottomColor: 'rgba(149, 147, 147, 0.69)',
+        paddingBottom: 10,
+        paddingTop:30,
+        paddingRight:10,
+        backgroundColor: '#4d4fff',
     
-  },
-  infoinput: {
-    height: 'auto',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    textAlign: 'right',
-    marginBottom: 10,
-    fontFamily: 'NotoKufiArabic-Regular',
-    backgroundColor:'#fff',
-
-  },
-  errorInput: {
-    borderColor: 'red',
-    borderWidth: 1,
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  btns: {
+      },
+      title: {
+        fontSize: 25,
+        textAlign: 'right',
+        marginTop: -8,
+        fontFamily: 'NotoKufiArabic-Bold',
+    
+      },
+      arrowIcon: {
+        width: 40,
+        height: 40,
+      },
+      line: {
+        height: 2,
+        width: '100%',
+        shadowColor: 'rgba(0, 0, 0, 0.1)',
+        backgroundColor: 'rgba(149, 147, 147, 0.69)',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 5,
+        shadowRadius: 10,
+        elevation: 15,
+        fontFamily: 'NotoKufiArabic-Regular',
+      },
+      infocontainer: {
+        marginBottom: 20,
+        fontFamily: 'NotoKufiArabic-Regular',
+        marginRight:20,
+        marginLeft:20,
+      },
+      welcomeMessage: {
+        fontSize: 18,
+        marginBottom: 20,
+        textAlign: 'right',
+        fontFamily: 'NotoKufiArabic-Regular',
+      },
+      ex: {
+        fontSize: 22,
+        textAlign: 'right',
+        fontFamily: 'NotoKufiArabic-Regular',
+      },
+      section: {
+        marginBottom: 20,
+        fontFamily: 'NotoKufiArabic-Regular',
+        marginRight:20,
+        marginLeft:20,
+      },
+      pickerContainer: {
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+        overflow: 'hidden',
+        marginBottom: 10,
+        fontFamily: 'NotoKufiArabic-Regular',
+        textAlign: 'right',
+      },
+      picker: {
+        height: 'auto',
+        width: '100%',
+        textAlign: 'right',
+        paddingRight: 10,
+        backgroundColor:'#fff',
+     textAlign: 'right', // لمحاذاة النص إلى اليمين
+    direction: 'rtl',
+    
+      },
+      PickerItem: {
+        fontFamily: 'NotoKufiArabic-Regular',
+        fontSize: 15,
+        color: '#000'
+      },
+      placeinput: {
+        height: 'auto',
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        textAlign: 'right',
+        marginBottom: 10,
+        fontFamily: 'NotoKufiArabic-Regular',
+        backgroundColor:'#fff',
+        
+      },
+      infoinput: {
+        height: 'auto',
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        textAlign: 'right',
+        marginBottom: 10,
+        fontFamily: 'NotoKufiArabic-Regular',
+        backgroundColor:'#fff',
+    
+      },
+      errorInput: {
+        borderColor: 'red',
+        borderWidth: 1,
+        fontFamily: 'NotoKufiArabic-Regular',
+      },
+      btns: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'NotoKufiArabic-Regular',
+        marginRight:20,
+        marginLeft:20,
+      },
+      nextButton: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        backgroundColor: '#4D4FFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 6,
+        borderRadius: 10,
+        borderWidth:2,
+        borderColor:'#4D4FFF',
+        
+    
+      },
+      nextText: {
+        fontSize: 20,
+        color: '#FFF',
+        marginHorizontal: 10,
+        fontFamily: 'NotoKufiArabic-Regular',
+      },
+      nextimg: {
+        marginRight: 10,
+        width: 30,
+        height: 30,
+        resizeMode: 'contain',
+        fontFamily: 'NotoKufiArabic-Regular',
+      },
+      cancelButton: {
+        display: 'flex',
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        paddingLeft: 10,
+        paddingRight: 10,
+        marginLeft: -31,
+        width: 139,
+        height: 71,
+        backgroundColor: '#E0E0E0',
+        shadowColor: 'rgba(0, 0, 0, 0.25)',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 5,
+        shadowRadius: 10,
+        elevation: 1,
+        borderTopRightRadius: 10,
+        borderBottomRightRadius: 10,
+      },
+      cancelText: {
+        fontSize: 20,
+        color: '#000000',
+        fontFamily: 'NotoKufiArabic-Regular',
+      },
+      cancelimg: {
+        width: 25,
+        height: 25,
+      },
+  errorModalOverlay: {
     flex: 1,
-    display: 'flex',
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    fontFamily: 'NotoKufiArabic-Regular',
-    marginRight:20,
-    marginLeft:20,
+    alignItems: 'center',
   },
-  nextButton: {
-    flexDirection: 'row-reverse',
+  errorModalContainer: {
+    backgroundColor: '#fff',
+    width: '80%',
+    borderRadius: 15,
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    borderWidth: 2,
+    borderColor: '#4D4FFF',
+  },
+  errorModalText: {
+    fontSize: 18,
+    textAlign: 'center',
+    fontFamily: 'NotoKufiArabic-Regular',
+    color: '#333',
+    marginBottom: 20,
+  },
+  errorModalButton: {
     backgroundColor: '#4D4FFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
-    borderRadius: 10,
-    borderWidth:2,
-    borderColor:'#4D4FFF',
-    
-
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
   },
-  nextText: {
-    fontSize: 20,
-    color: '#FFF',
-    marginHorizontal: 10,
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  nextimg: {
-    marginRight: 10,
-    width: 30,
-    height: 30,
-    resizeMode: 'contain',
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  cancelButton: {
-    display: 'flex',
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingLeft: 10,
-    paddingRight: 10,
-    marginLeft: -31,
-    width: 139,
-    height: 71,
-    backgroundColor: '#E0E0E0',
-    shadowColor: 'rgba(0, 0, 0, 0.25)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 5,
-    shadowRadius: 10,
-    elevation: 1,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  cancelText: {
-    fontSize: 20,
-    color: '#000000',
-    fontFamily: 'NotoKufiArabic-Regular',
-  },
-  cancelimg: {
-    width: 25,
-    height: 25,
+  errorModalButtonText: {
+    color: '#fff',
+    fontFamily: 'NotoKufiArabic-Bold',
+    fontSize: 16,
   },
 });
 
-export default HomePage;
+export default reg;

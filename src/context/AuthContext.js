@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios'; // Make sure axios is imported!
-import { API_BASE_URL } from '../../app/config';
+import { API_BASE_URL } from '../../app/config/config';
 
 const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {

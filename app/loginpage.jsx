@@ -1,25 +1,55 @@
 
-import React, { useState, useRef } from 'react';
+
+import { useRef, useState } from 'react';
 import {
-  Text,
-  View,
-  StyleSheet,
+  ActivityIndicator,
   Image,
-  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  Text,
   TextInput,
-  Alert,
-  ActivityIndicator
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 
-import { Link } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import axios from 'axios';
-import { useAuth } from '../src/context/AuthContext';
-import welcom from '@/assets/images/welcom.png';
 import close from '@/assets/images/close.png';
-import { API_BASE_URL } from './config';
-const HomePage = () => {
+import eyeClosed from '@/assets/images/eye-closed.png';
+import eyeOpen from '@/assets/images/eye-open.png';
+import welcom from '@/assets/images/welcom.png';
+import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { Link } from 'expo-router';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useAuth } from '../src/context/AuthContext';
+import { API_BASE_URL } from './config/config';
+
+const ErrorMessageModal = ({ visible, message, onClose }) => {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.errorModalOverlay}>
+          <View style={styles.errorModalContainer}>
+            <Text style={styles.errorModalText}>{message}</Text>
+            <TouchableOpacity
+              style={styles.errorModalButton}
+              onPress={onClose}
+            >
+              <Text style={styles.errorModalButtonText}>موافق</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+};
+
+const loginpage = () => {
   const navigation = useNavigation();
   const { login } = useAuth();
   const [username, setUsername] = useState('');
@@ -27,10 +57,11 @@ const HomePage = () => {
   const [usernameError, setUsernameError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorVisible, setErrorVisible] = useState(false);
   const passwordInputRef = useRef(null);
-
+ const [showPassword, setShowPassword] = useState(false);
   const handleSubmit = async () => {
-    // Validation logic
     let hasError = false;
     if (!username.trim()) {
       setUsernameError(true);
@@ -41,13 +72,13 @@ const HomePage = () => {
       hasError = true;
     }
     if (hasError) {
-      Alert.alert('خطأ', 'يرجى ملء جميع الحقول');
+      setErrorMessage('يرجى ملء جميع الحقول');
+      setErrorVisible(true);
       return;
     }
 
     setLoading(true);
     try {
-      // API call
       const response = await axios.post(
         `${API_BASE_URL}/account/token/`,
         {
@@ -61,21 +92,19 @@ const HomePage = () => {
         }
       );
 
-      // Handle successful login
       if (response.data.access && response.data.refresh) {
         await login({ 
           username: username.trim(),
-          access: response.data.access,    // Correct key for the access token
-          refresh: response.data.refresh   // Pass the refresh token as well
+          access: response.data.access,
+          refresh: response.data.refresh
         });
         navigation.navigate('gallary');
       }
       
     } catch (error) {
-      // Error handling
-      console.error('Login error:', error);
-      const errorMessage = error.response?.data?.detail || 'فشل في الاتصال بالخادم';
-      Alert.alert('خطأ', errorMessage);
+      const errorMessage = error.response?.data?.detail || 'فشل في الاتصال بالخادم قد تكون اسم المستخدم او كلمة السر غير صحيحة';
+      setErrorMessage(errorMessage);
+      setErrorVisible(true);
     } finally {
       setLoading(false);
     }
@@ -88,27 +117,34 @@ const HomePage = () => {
       enableOnAndroid={true}
       extraScrollHeight={20}
     >
+      <ErrorMessageModal
+        visible={errorVisible}
+        message={errorMessage}
+        onClose={() => setErrorVisible(false)}
+      />
+
       <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => navigation.navigate('index')}
-              >
-                <Image source={close} style={styles.closeimg} />
-              </TouchableOpacity>
-            
+        style={styles.closeButton}
+        onPress={() => navigation.navigate('index')}
+      >
+        <Image source={close} style={styles.closeimg} />
+      </TouchableOpacity>
+    
       <View style={styles.logocontainer}>
         <Image source={welcom} style={styles.logo} />
       </View>
 
-      <View style={styles.every}>
+       <View style={styles.every}>
         <View style={styles.formm}>
           <View style={styles.input}>
-            <Text style={styles.loginButtonText}>اسم المستخدم</Text>
+            <Text style={styles.loginButtonText}>اسم المستخدم او رقم الهاتف</Text>
             <TextInput
               style={[
                 styles.textplace,
                 usernameError && { borderColor: 'red', borderWidth: 1 },
               ]}
               value={username}
+              autoCapitalize="none"
               returnKeyType="next"
               onSubmitEditing={() => passwordInputRef.current?.focus()}
               onChangeText={(text) => {
@@ -118,21 +154,33 @@ const HomePage = () => {
             />
 
             <Text style={styles.loginButtonText}>كلمة المرور</Text>
-            <TextInput
-              ref={passwordInputRef}
-              style={[
-                styles.textplace,
-                passwordError && { borderColor: 'red', borderWidth: 1 },
-              ]}
-              secureTextEntry={true}
-              value={password}
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-              onChangeText={(text) => {
-                setPassword(text);
-                setPasswordError(false);
-              }}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                ref={passwordInputRef}
+                style={[
+                  styles.passwordInput,
+                  passwordError && { borderColor: 'red', borderWidth: 1 },
+                ]}
+                autoCapitalize="none"
+                secureTextEntry={!showPassword}
+                value={password}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setPasswordError(false);
+                }}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Image
+                  source={showPassword ? eyeOpen : eyeClosed}
+                  style={styles.eyeIconImage}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.nothavecontainer}>
@@ -164,7 +212,7 @@ const HomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#F7F7F7',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -189,14 +237,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   loginButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#000000',
     textAlign: 'right',
     marginBottom: 5,
     fontFamily: 'NotoKufiArabic-Regular',
   },
   textplace: {
-    backgroundColor: '#D9D9D9',
+    backgroundColor: '#fff',
     fontSize: 16,
     height: 40,
     paddingHorizontal: 10,
@@ -204,7 +252,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginBottom: 15,
     borderRadius: 5,
-
+    borderColor: '#ccc',
+    borderWidth:1,
   },
   nothavecontainer: {
     flexDirection: 'row-reverse',
@@ -245,7 +294,64 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'NotoKufiArabic-Regular',
   },
+  errorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorModalContainer: {
+    backgroundColor: '#fff',
+    width: '80%',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4D4FFF',
+  },
+  errorModalText: {
+    fontSize: 18,
+    textAlign: 'center',
+    fontFamily: 'NotoKufiArabic-Regular',
+    color: '#333',
+    marginBottom: 20,
+  },
+  errorModalButton: {
+    backgroundColor: '#4D4FFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+  },
+  errorModalButtonText: {
+    color: '#fff',
+    fontFamily: 'NotoKufiArabic-Bold',
+    fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D1D1D6',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginBottom: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    height: 40,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    textAlign:'right',
+  },
+  eyeIcon: {
+    padding: 10,
+    backgroundColor: '#fff',
+    borderWidth: 0,
+  },
+  eyeIconImage: {
+    width: 24,
+    height: 24,
+  },
 });
 
-export default HomePage;
-
+export default loginpage;

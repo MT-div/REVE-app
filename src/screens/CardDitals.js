@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import axios from 'axios';
-import { API_BASE_URL } from '../../app/config'; // Adjust path if needed
+import { API_BASE_URL } from '../../app/config/config'; // Adjust path if needed
 
 const { width } = Dimensions.get('window');
 

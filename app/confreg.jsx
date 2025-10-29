@@ -1,11 +1,9 @@
-import React from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, ImageBackground, Pressable, TextInput } from 'react-native';
-import { Link } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
 import conficon from '@/assets/images/conficon.png';
+import { useNavigation } from '@react-navigation/native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
-const HomePage = () => {
+const confreg = () => {
     const navigation = useNavigation();
 
     return (
@@ -17,13 +15,13 @@ const HomePage = () => {
                 </Text>
             <Text style={styles.urwindow}>
                 
-            سيتم التواصل معك من قبل فريق AVAR لمناقشة باقي التفاصيل
+            سيتم التواصل معك من قبل فريق RÊVE لمناقشة باقي التفاصيل
 
 
             </Text>
             <Text style={styles.urwindow}>
                 
-            شكرا لإستعمالك  AVAR
+            شكرا لإستعمالك  RÊVE
     
     
                 </Text>
@@ -61,7 +59,6 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'Inter',
         fontStyle: 'normal',
         fontWeight: '900',
         fontSize: 40,
@@ -76,7 +73,6 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        fontFamily: 'Inter',
         fontStyle: 'normal',
         fontWeight: '500',
         fontSize: 25,
@@ -109,7 +105,6 @@ const styles = StyleSheet.create({
 
     },
     confText: {
-        fontFamily: 'Inter',
         fontStyle: 'normal',
         fontWeight: '800',
         fontSize: 18,
@@ -121,4 +116,4 @@ const styles = StyleSheet.create({
 
 });
 
-export default HomePage;
+export default confreg;

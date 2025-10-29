@@ -1,17 +1,15 @@
-import React from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, ImageBackground, Pressable, TextInput } from 'react-native';
-import { Link } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
 import Welcome2 from '@/assets/images/Welcome2.png';
+import { useNavigation } from '@react-navigation/native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
-const HomePage = () => {
+const welcome = () => {
     const navigation = useNavigation();
 
     return (
         <View style={styles.container}>
             <Image source={Welcome2} style={styles.welcome} />
-            <Text style={styles.welAvar} >AVAR أهلا بك في</Text>
+            <Text style={styles.welAvar} >RÊVE أهلا بك في</Text>
             <Text style={styles.urwindow}>نافذتك لعالم الراحة في الحجوزات</Text>
 
             <View style={styles.confcont}>
@@ -82,4 +80,4 @@ const styles = StyleSheet.create({
 
 });
 
-export default HomePage;
+export default welcome;

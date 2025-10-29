@@ -217,6 +217,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(149, 147, 147, 0.69)',
     paddingBottom: 10,
     paddingTop:30,
+    paddingRight:10,
     backgroundColor:'#4D4FFF',
 
   },
@@ -312,6 +313,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     fontFamily: 'NotoKufiArabic-Regular',
+    textAlign: 'right'
   },
   picker: {
     height: 'auto',
@@ -321,7 +323,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     backgroundColor:'#fff',
-
+ textAlign: 'right', // لمحاذاة النص إلى اليمين
+    direction: 'rtl',
   },
   PickerItem: {
     fontFamily: 'NotoKufiArabic-Regular',

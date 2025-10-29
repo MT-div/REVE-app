@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, TouchableOpacity, StyleSheet, FlatList, Image, ScrollView
-} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import moment from 'moment';
-import { useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
-import { API_BASE_URL } from './config';
+import { useLocalSearchParams } from 'expo-router';
+import moment from 'moment';
+import { useEffect, useState } from 'react';
+import {
+  FlatList, Image, ScrollView,
+  StyleSheet,
+  Text, TouchableOpacity,
+  View
+} from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
-
+import { API_BASE_URL } from './config/config';
+import GestureRecognizer from 'react-native-swipe-gestures';
 import close from '@/assets/images/close.png';
 
 const Calendar = () => {
@@ -163,7 +166,17 @@ const Calendar = () => {
     );
   };
 
-  return (
+    return (
+    <GestureRecognizer
+      onSwipeLeft={() => changeMonth(1)}
+      onSwipeRight={() => changeMonth(-1)}
+      config={{
+        velocityThreshold: 0.3,
+        directionalOffsetThreshold: 80,
+      }}
+      style={{ flex: 1 }}
+    >
+
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -249,8 +262,11 @@ const Calendar = () => {
         </View>
       </View>
     </View>
+    </GestureRecognizer>
   );
 };
+
+
 
 const styles = StyleSheet.create({
   container: {

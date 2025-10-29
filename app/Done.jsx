@@ -3,6 +3,7 @@ import { Text, View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router'; // Using expo-router hook for params
 import conficon from '@/assets/images/conficon.png';
+import sh from '@/assets/images/sh.png';
 
 const Done = () => {
   const navigation = useNavigation();
@@ -11,14 +12,15 @@ const Done = () => {
 
   return (
     <View style={styles.container}>
+      <Image source={sh} style={styles.welcome} />
       <Text style={styles.welAvar}>تم استلام طلبك بنجاح</Text>
-      <Text style={styles.urwindow}>سيتم التواصل معك من قبل AVAR لتأكيد حجزك</Text>
-      <Text style={styles.urwindow}>شكرا لإستعمالك  AVAR</Text>
+      <Text style={styles.urwindow}>سيتم التواصل معك من قبل RÊVE لتأكيد حجزك</Text>
+      <Text style={styles.urwindow}>شكرا لإستعمالك  RÊVE</Text>
       <View style={styles.confcont}>
         <TouchableOpacity
           style={styles.conf}
           // Pass the id to CardDitals to ensure it refreshes correctly
-          onPress={() => navigation.navigate('CardDitals', { id })}
+          onPress={() => navigation.navigate('CardDitals', { from: 'Done',id })}
         >
           <Text style={styles.confText}>موافق</Text>
         </TouchableOpacity>
@@ -44,6 +46,7 @@ const styles = StyleSheet.create({
   welcome: {
     flex: 4,
     maxWidth: '99%',
+    tintColor: '#4D4FFF'
   },
   welAvar: {
     display: 'flex',
